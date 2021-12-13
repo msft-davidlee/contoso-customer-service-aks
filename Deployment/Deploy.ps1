@@ -23,9 +23,13 @@ if (!$acr) {
     throw "Unable to find eligible platform container registry!"
 }
 
+$acrName = $acr.Name
+
+Write-Host "ACR $acrName"
+
 # Associate ACR with AKS
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
 
-az aks update -n $AKS_NAME -g $AKS_RESOURCE_GROUP --attach-acr $acr.Name
+az aks update -n $AKS_NAME -g $AKS_RESOURCE_GROUP --attach-acr $acrName
 
 Invoke-Sqlcmd -InputFile "$AppCode\Db\Migrations.sql" -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $SqlPassword
