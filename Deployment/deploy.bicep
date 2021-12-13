@@ -4,12 +4,12 @@ param branch string
 param location string
 @secure()
 param sqlPassword string
-param aadTenantId string
-param aadDomain string
-@secure()
-param aadClientId string
-@secure()
-param aadClientSecret string
+// param aadTenantId string
+// param aadDomain string
+// @secure()
+// param aadClientId string
+// @secure()
+// param aadClientSecret string
 param kubernetesVersion string = '1.21.2'
 param subnetId string
 param aksMSIId string
