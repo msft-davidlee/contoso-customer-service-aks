@@ -157,6 +157,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
   }
 }
 
+output aksName string = aks.name
 output sqlserver string = sql.properties.fullyQualifiedDomainName
 output sqlusername string = sqlUsername
 output dbname string = dbName

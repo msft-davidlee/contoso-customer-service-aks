@@ -68,7 +68,10 @@ jobs:
       - id: appsdeploy
         name: Deploy apps
         run: |
-          .\main\Deployment\Deploy.ps1 -AppCode appcode `
+          .\main\Deployment\Deploy.ps1 `
+          -AKS_RESOURCE_GROUP ${{ env.RESOURCE_GROUP_NAME }} `
+          -AKS_NAME ${{ steps.deploy.outputs.aksName }} `
+          -AppCode appcode `
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
