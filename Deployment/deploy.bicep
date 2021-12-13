@@ -12,6 +12,7 @@ param aadClientId string
 param aadClientSecret string
 param kubernetesVersion string = '1.21.2'
 param subnetId string
+param aksMSIId string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -114,6 +115,12 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
   name: stackName
   location: location
   tags: tags
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${aksMSIId}': {}
+    }
+  }
   properties: {
     dnsPrefix: prefix
     kubernetesVersion: kubernetesVersion
