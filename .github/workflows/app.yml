@@ -55,7 +55,7 @@ jobs:
         name: Resolve network
         working-directory: .\main\deployment
         run: |
-          .\ResolveNetwork.ps1 -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }}          
+          .\ResolveNetwork.ps1 -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }} -BUILD_ENV ${{ needs.setup.outputs.build_env }}
 
       - name: Build azure environment
         id: deploy

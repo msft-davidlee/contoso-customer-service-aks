@@ -1,5 +1,6 @@
 param(
-    [string]$NETWORKING_PREFIX)
+    [string]$NETWORKING_PREFIX,
+    [string]$BUILD_ENV)
 
 $platformRes = (az resource list --tag stack-name=$NETWORKING_PREFIX | ConvertFrom-Json)
 if (!$platformRes) {
