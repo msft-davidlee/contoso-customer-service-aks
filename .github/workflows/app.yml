@@ -1,0 +1,81 @@
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      environmentselector:
+        description: "Environment selector"
+        required: false
+        default: "default"
+
+jobs:
+  setup:
+    name: Choose Secrets Environment Job
+    runs-on: windows-latest
+    steps:
+      - id: setup
+        name: Setup Environment Setp
+        run: |
+          $envSelector = "${{ github.event.inputs.environmentselector }}"
+          Write-Host "Environment Selector: $envSelector Branch ${{ github.ref }}"
+          if ($envSelector -eq '' -or $envSelector -eq 'default') {            
+            if ('${{ github.ref }}' -eq 'refs/heads/main') { 
+              echo "::set-output name=build_env::prod"              
+            } else {
+              echo "::set-output name=build_env::dev"              
+            }
+          } else {
+            echo "::set-output name=build_env::$envSelector"            
+          }
+    outputs:
+      build_env: ${{ steps.setup.outputs.build_env }}
+
+  build_deploy:
+    name: Build and Deploy
+    needs: setup
+    environment: ${{ needs.setup.outputs.build_env }}
+    runs-on: windows-latest
+    env:
+      RESOURCE_GROUP_NAME: ${{ secrets.RESOURCE_GROUP }}-${{ needs.setup.outputs.build_env }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: main      
+      - uses: actions/checkout@v2
+        with:
+          repository: msft-davidlee/contoso-customer-service-app
+          path: appcode
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          enable-AzPSSession: true
+
+      - id: resolve-network
+        name: Resolve network
+        working-directory: .\main\deployment
+        run: |
+          .\Deployment\ResolveNetwork.ps1 -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }}          
+
+      - name: Build azure environment
+        id: deploy
+        uses: azure/arm-deploy@v1
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP_NAME }}
+          template: ./main/deployment/deploy.bicep
+          parameters: aadTenantId=${{ secrets.AAD_TENANT_ID }} aadDomain=${{ secrets.AAD_DOMAIN }} aadClientId=${{ secrets.AAD_CLIENT_ID }} aadClientSecret=${{ secrets.AAD_CLIENT_SECRET }} location=${{ secrets.LOCATION }} prefix=${{ secrets.PREFIX }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} sqlPassword=${{ secrets.SQLPASSWORD }} subnetId=${{ steps.resolve-network.outputs.subnetId }}
+
+      # - id: appsdeploy
+      #   name: Deploy to app services using zip deployment
+      #   run: |
+      #     .\main\Deployment\Deploy.ps1 -CustomerService ${{ steps.deploy.outputs.cs }} `
+      #     -AlternateId ${{ steps.deploy.outputs.altid }} `
+      #     -PartnerApi ${{ steps.deploy.outputs.partapi }} `
+      #     -Backend ${{ steps.deploy.outputs.backend }} `
+      #     -BuildAccountName ${{ secrets.BUILD_ACCOUNT_NAME }} `
+      #     -ResourceGroup ${{ env.RESOURCE_GROUP_NAME }} `
+      #     -AppCode appcode `
+      #     -DbName ${{ steps.deploy.outputs.dbname }} `
+      #     -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
+      #     -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
+      #     -SqlPassword ${{ secrets.SQLPASSWORD }}
