@@ -24,6 +24,8 @@ if (!$acr) {
 }
 
 # Associate ACR with AKS
-Set-AzAksCluster -ResourceGroupName $AKS_RESOURCE_GROUP -Name $AKS_NAME -AcrNameToAttach $acr.Name
+az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
+
+az aks update -n $AKS_NAME -g $AKS_RESOURCE_GROUP --attach-acr $acr.Name
 
 Invoke-Sqlcmd -InputFile "$AppCode\Db\Migrations.sql" -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $SqlPassword
