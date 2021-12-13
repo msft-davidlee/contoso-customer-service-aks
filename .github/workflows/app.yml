@@ -65,17 +65,11 @@ jobs:
           template: ./main/deployment/deploy.bicep
           parameters: location=${{ steps.resolve-network.outputs.location }} prefix=${{ secrets.PREFIX }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} sqlPassword=${{ secrets.SQLPASSWORD }} subnetId=${{ steps.resolve-network.outputs.subnetId }} aksMSIId=${{ secrets.AKS_MSI_ID }}
 
-      # - id: appsdeploy
-      #   name: Deploy to app services using zip deployment
-      #   run: |
-      #     .\main\Deployment\Deploy.ps1 -CustomerService ${{ steps.deploy.outputs.cs }} `
-      #     -AlternateId ${{ steps.deploy.outputs.altid }} `
-      #     -PartnerApi ${{ steps.deploy.outputs.partapi }} `
-      #     -Backend ${{ steps.deploy.outputs.backend }} `
-      #     -BuildAccountName ${{ secrets.BUILD_ACCOUNT_NAME }} `
-      #     -ResourceGroup ${{ env.RESOURCE_GROUP_NAME }} `
-      #     -AppCode appcode `
-      #     -DbName ${{ steps.deploy.outputs.dbname }} `
-      #     -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
-      #     -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
-      #     -SqlPassword ${{ secrets.SQLPASSWORD }}
+      - id: appsdeploy
+        name: Deploy apps
+        run: |
+          .\main\Deployment\Deploy.ps1 -AppCode appcode `
+          -DbName ${{ steps.deploy.outputs.dbname }} `
+          -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
+          -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
+          -SqlPassword ${{ secrets.SQLPASSWORD }}

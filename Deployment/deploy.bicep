@@ -157,8 +157,6 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
   }
 }
 
-//var sqlConnectionString = 'Data Source=${sql.properties.fullyQualifiedDomainName};Initial Catalog=${dbName}; User Id=${sqlUsername};Password=${sqlPassword}'
-
 output sqlserver string = sql.properties.fullyQualifiedDomainName
 output sqlusername string = sqlUsername
 output dbname string = dbName
