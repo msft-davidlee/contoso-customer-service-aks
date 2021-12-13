@@ -15,6 +15,7 @@ if (!$vnet) {
 }
 $vnetRg = $vnet.resourceGroup
 $vnetName = $vnet.name
+$location = $vnet.location
 
 $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
 if (!$subnets) {
@@ -26,3 +27,4 @@ if (!$subnetId) {
 }
 
 Write-Host "::set-output name=subnetId::$subnetId"
+Write-Host "::set-output name=location::$location"
