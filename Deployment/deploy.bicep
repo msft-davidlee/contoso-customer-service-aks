@@ -12,8 +12,6 @@ param aadClientId string
 param aadClientSecret string
 param kubernetesVersion string = '1.21.2'
 param subnetId string
-param aksClientId string
-param aksClientSecret string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -141,10 +139,6 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
         tags: tags
       }
     ]
-    servicePrincipalProfile: {
-      clientId: aksClientId
-      secret: aksClientSecret
-    }
     addonProfiles: {
       omsagent: {
         enabled: true
