@@ -25,7 +25,7 @@ spec:
           secretName: dotfile-secret
       containers:
       - name: customerservice
-        image: $ACRNAME.azurecr.io/contoso-demo-website
+        image: $ACRNAME.azurecr.io/contoso-demo-website:v1
         resources:
           requests:
             cpu: 100m
