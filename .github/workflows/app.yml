@@ -72,6 +72,7 @@ jobs:
           -AKS_RESOURCE_GROUP ${{ env.RESOURCE_GROUP_NAME }} `
           -AKS_NAME ${{ steps.deploy.outputs.aksName }} `
           -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }} `
+          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
           -AppCode appcode `
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
