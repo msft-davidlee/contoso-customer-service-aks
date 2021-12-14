@@ -71,6 +71,7 @@ jobs:
           .\main\Deployment\Deploy.ps1 `
           -AKS_RESOURCE_GROUP ${{ env.RESOURCE_GROUP_NAME }} `
           -AKS_NAME ${{ steps.deploy.outputs.aksName }} `
+          -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }} `
           -AppCode appcode `
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
