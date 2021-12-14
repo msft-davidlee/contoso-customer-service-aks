@@ -4,6 +4,7 @@ param(
     [string]$NETWORKING_PREFIX,
     [string]$BUILD_ENV,
     [string]$AppCode,
+    [string]$DeployCode,
     [string]$DbName,
     [string]$SqlServer,
     [string]$SqlUsername,
@@ -43,7 +44,7 @@ else {
 
 helm repo update
 helm install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace $namespace
-kubectl apply -f .\$AppCode\Deployment\external-ingress.yaml --namespace $namespace
+kubectl apply -f .\$DeployCode\Deployment\external-ingress.yaml --namespace $namespace
 
 # Step 5: Setup configuration for resources
 $dbConnectionString = "Server=tcp:$SqlServer.database.windows.net,1433;Initial Catalog=appdb;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
@@ -65,10 +66,10 @@ if (!$acr) {
 $acrName = $acr.Name
 
 # Step 6: Deploy customer service app.
-$content = Get-Content .\Deployment\customerservice.yaml
+$content = Get-Content .\$DeployCode\Deployment\customerservice.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$NAMESPACE', $namespace)
 
-Set-Content -Path ".\$AppCode\customerservice.yaml" -Value $content
-kubectl apply -f ".\$AppCode\customerservice.yaml" --namespace $namespace
+Set-Content -Path ".\customerservice.yaml" -Value $content
+kubectl apply -f ".\customerservice.yaml" --namespace $namespace

@@ -74,6 +74,7 @@ jobs:
           -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }} `
           -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
           -AppCode appcode `
+          -DeployCode main `
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
