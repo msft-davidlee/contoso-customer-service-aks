@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dotfile-secret
+data:
+  .secret-file: "$BASE64CONNECTIONSTRING"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customerservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: customerservice
+  template:
+    metadata:
+      labels:
+        app: customerservice
+    spec:
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: dotfile-secret
+      containers:
+      - name: customerservice
+        image: $ACRNAME.azurecr.io/contoso-demo-website
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+        volumeMounts:
+            - name: secret-volume
+              readOnly: true
+              mountPath: "/etc/secret-volume"
+        env:
+        - name: DbConnectionString
+          value: FilePath=/etc/secret-volume/.secret-file
+        - name: AlternateIdServiceUri
+          value: http://alternateid.$NAMESPACE.svc.cluster.local
+        - name: PartnerAPIUri
+          value: http://partnerapi.$NAMESPACE.svc.cluster.local
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customerservice
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+  selector:
+    app: customerservice
