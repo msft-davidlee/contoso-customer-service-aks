@@ -12,6 +12,7 @@ spec:
     http:
       paths:
       - backend:
-          name: customerservice
-          port: 80
+          service:
+            name: customerservice
+            port: 80
         path: /(.*)
