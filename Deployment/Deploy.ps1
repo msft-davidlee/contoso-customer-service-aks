@@ -11,6 +11,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "Stack-name tag value: $NETWORKING_PREFIX"
+
 $platformRes = (az resource list --tag stack-name=$NETWORKING_PREFIX | ConvertFrom-Json)
 if (!$platformRes) {
     throw "Unable to find eligible platform resources!"
@@ -19,7 +20,7 @@ if ($platformRes.Length -eq 0) {
     throw "Unable to find 'ANY' eligible platform resources!"
 }
 
-$acr = ($platformRes | Where-Object { $_.type -eq "Microsoft.ContainerRegistry/registries" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
+$acr = ($platformRes | Where-Object { $_.type -eq "Microsoft.ContainerRegistry/registries" -and $_.resourceGroup.EndsWith($BUILD_ENV) })
 if (!$acr) {
     throw "Unable to find eligible platform container registry!"
 }
