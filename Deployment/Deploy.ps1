@@ -43,7 +43,7 @@ else {
 }
 
 helm repo update
-helm install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace $namespace
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
 kubectl apply -f .\$DeployCode\Deployment\external-ingress.yaml --namespace $namespace
 
 # Step 5: Setup configuration for resources
