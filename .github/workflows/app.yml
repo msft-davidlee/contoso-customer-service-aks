@@ -79,4 +79,9 @@ jobs:
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
           -SqlPassword ${{ secrets.SQLPASSWORD }} `
-          -Backend ${{ steps.deploy.outputs.backend }}
+          -Backend ${{ steps.deploy.outputs.backend }} `
+          -AAD_INSTANCE ${{ steps.deploy.outputs.aadinstance }} `
+          -AAD_TENANT_ID ${{ secrets.AAD_TENANT_ID }} `
+          -AAD_DOMAIN ${{ secrets.AAD_DOMAIN }} `
+          -AAD_CLIENT_ID ${{ secrets.AAD_CLIENT_ID }} `
+          -AAD_CLIENT_SECRET ${{ secrets.AAD_CLIENT_SECRET }}

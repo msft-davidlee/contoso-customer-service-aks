@@ -33,5 +33,9 @@ To create this, you will need to follow build the application. Follow the guidan
 10. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n <AKS_NAME> -g <AKS_GROUP_NAME> --acr <ACR_NAME>.azurecr.io ```
 11. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
 
+# Take Note
+1. NSG applied on your AKS Subnet may be impacting access to the site.
+2. Remember to add the URL of Frontdoor to your AAD app registration for redirect purposes.
+
 ## Have an issue?
 You are welcome to create an issue if you need help but please note that there is no timeline to answer or resolve any issues you have with the contents of this project. Use the contents of this project at your own risk! If you are interested to volunteer to maintain this, please feel free to reach out to be added as a contributor and send Pull Requests (PR).

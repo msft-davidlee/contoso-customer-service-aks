@@ -48,6 +48,20 @@ spec:
           value: http://partnerapi.$NAMESPACE.svc.cluster.local
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
+        - name: EnableAuth
+          value: "true"
+        - name: AzureAd:CallbackPath
+          value: /signin-oidc
+        - name: AzureAd:Instance
+          value: $AADINSTANCE
+        - name: AzureAd:TenantId
+          value: $AADTENANTID
+        - name: AzureAd:Domain
+          value: $AADDOMAIN
+        - name: AzureAd:ClientId
+          value: $AADCLIENTID
+        - name: AzureAd:ClientSecret
+          value: $AADCLIENTSECRET                          
 ---
 apiVersion: v1
 kind: Service

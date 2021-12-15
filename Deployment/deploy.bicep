@@ -251,3 +251,4 @@ resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
   }
 }
 output backend string = backendapp
+output aadinstance string = environment().authentication.loginEndpoint

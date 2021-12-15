@@ -10,6 +10,11 @@ param(
     [string]$SqlUsername,
     [string]$SqlPassword,
     [string]$Backend,
+    [string]$AAD_INSTANCE,
+    [string]$AAD_DOMAIN,
+    [string]$AAD_TENANT_ID,
+    [string]$AAD_CLIENT_ID,
+    [string]$AAD_CLIENT_SECRET,
     [switch]$UseServiceBus)
 
 $ErrorActionPreference = "Stop"
@@ -92,6 +97,12 @@ $content = Get-Content .\$DeployCode\Deployment\customerservice.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$NAMESPACE', $namespace)
+
+$content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
+$content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
+$content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
+$content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
+$content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
 
 Set-Content -Path ".\customerservice.yaml" -Value $content
 kubectl apply -f ".\customerservice.yaml" --namespace $namespace
