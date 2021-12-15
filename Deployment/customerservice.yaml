@@ -50,17 +50,17 @@ spec:
           value: Development
         - name: EnableAuth
           value: "true"
-        - name: AzureAd:CallbackPath
+        - name: AzureAd__CallbackPath
           value: /signin-oidc
-        - name: AzureAd:Instance
+        - name: AzureAd__Instance
           value: $AADINSTANCE
-        - name: AzureAd:TenantId
+        - name: AzureAd__TenantId
           value: $AADTENANTID
-        - name: AzureAd:Domain
+        - name: AzureAd__Domain
           value: $AADDOMAIN
-        - name: AzureAd:ClientId
+        - name: AzureAd__ClientId
           value: $AADCLIENTID
-        - name: AzureAd:ClientSecret
+        - name: AzureAd__ClientSecret
           value: $AADCLIENTSECRET                          
 ---
 apiVersion: v1

@@ -106,6 +106,9 @@ $content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
 
 Set-Content -Path ".\customerservice.yaml" -Value $content
 kubectl apply -f ".\customerservice.yaml" --namespace $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy customer service app."
+}
 
 # Step 7: Deploy Alternate Id service.
 $content = Get-Content .\$DeployCode\Deployment\alternateid.yaml
