@@ -72,10 +72,9 @@ else {
 helm repo update
 
 # Step 4b.
-az storage blob download-batch -d . -s certs --account-name $BuildAccountName
-
 $testSecret = (kubectl get secret aks-ingress-tls -o json -n myapps)
 if (!$testSecret) {
+    az storage blob download-batch -d . -s certs --account-name $BuildAccountName
     kubectl create secret tls aks-ingress-tls `
         --namespace $namespace `
         --key .\demo.contoso.com.key `
