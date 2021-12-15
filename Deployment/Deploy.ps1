@@ -74,13 +74,16 @@ helm repo update
 # Step 4b.
 az storage blob download-batch -d . -s certs --account-name $BuildAccountName
 
-kubectl create secret tls aks-ingress-tls `
-    --namespace $namespace `
-    --key .\demo.contoso.com.key `
-    --cert .\demo.contoso.com.crt
+$testSecret = (kubectl get secret aks-ingress-tls -o json -n myapps)
+if (!$testSecret) {
+    kubectl create secret tls aks-ingress-tls `
+        --namespace $namespace `
+        --key .\demo.contoso.com.key `
+        --cert .\demo.contoso.com.crt
 
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to set TLS for demo.contoso.com."
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to set TLS for demo.contoso.com."
+    }
 }
     
 # Step 4c. Install ingress controller
