@@ -28,10 +28,13 @@ To create this, you will need to follow build the application. Follow the guidan
 | SQLPASSWORD | SQL password that you want to use |
 | NETWORKING_PREFIX | Network stack-name tag with the specific value |
 
-8. Login via ``` az login ``` into Azure and then login to AKS with ``` az aks get-credentials -n <AKS_NAME> -g <AKS_GROUP_NAME> ```
-9. There's a manual command you need to execute in order for AKS to connect successfully to ACR. ``` az aks update -n <AKS_NAME> -g aks-dev --attach-acr <ACR_NAME> ```
-10. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n <AKS_NAME> -g <AKS_GROUP_NAME> --acr <ACR_NAME>.azurecr.io ```
-11. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
+8. Create certificate for your solution using the following ``` openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls" ```
+9. Next, upload the outputs to a container named certs in your storage account.
+10. Login via ``` az login ``` into Azure and then login to AKS with ``` az aks get-credentials -n <AKS_NAME> -g <AKS_GROUP_NAME> ```
+11. There's a manual command you need to execute in order for AKS to connect successfully to ACR. ``` az aks update -n <AKS_NAME> -g aks-dev --attach-acr <ACR_NAME> ```
+12. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n <AKS_NAME> -g <AKS_GROUP_NAME> --acr <ACR_NAME>.azurecr.io ```
+13. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
+14. Update your local host file to point to the public ip.
 
 # Take Note
 1. NSG applied on your AKS Subnet may be impacting access to the site.
