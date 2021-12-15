@@ -107,7 +107,7 @@ kubectl apply -f ".\alternateid.yaml" --namespace $namespace
 $content = Get-Content .\$DeployCode\Deployment\partnerapi.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
-$content = $content.Replace('$SENDERQUEUECONNECTIONSTRING', $acrName)
+$content = $content.Replace('$SENDERQUEUECONNECTIONSTRING', $SenderQueueConnectionString)
 $content = $content.Replace('$SHIPPINGREPOSITORYTYPE', $QueueType)
 
 Set-Content -Path ".\partnerapi.yaml" -Value $content
