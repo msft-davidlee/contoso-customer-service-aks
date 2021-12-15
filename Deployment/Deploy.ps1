@@ -41,7 +41,7 @@ else {
 $repoList = helm repo list --output json | ConvertFrom-Json
 $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1
 
-# Add the ingress-nginx repository
+# Step 4a: Add the ingress-nginx repository
 if (!$foundHelmIngressRepo ) {
     helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 }
@@ -50,6 +50,21 @@ else {
 }
 
 helm repo update
+
+# Step 4b.
+
+az storage blob download-batch -d . -s certs --account-name $BuildAccountName
+
+kubectl create secret tls aks-ingress-tls `
+    --namespace $namespace `
+    --key .\demo.contoso.com.key `
+    --cert .\demo.contoso.com.crt
+
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to set TLS for demo.contoso.com."
+}
+    
+# Step 4c. Install ingress controller
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
 kubectl apply -f .\$DeployCode\Deployment\external-ingress.yaml --namespace $namespace
 
@@ -71,7 +86,6 @@ if (!$acr) {
     throw "Unable to find eligible platform container registry!"
 }
 $acrName = $acr.Name
-
 
 if ($UseServiceBus) {
     $QueueType = "ServiceBus";
