@@ -20,6 +20,26 @@ param(
 $ErrorActionPreference = "Stop"
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
+# * We also need to determine if the environment is created properly with the right Azure resources.
+$platformRes = (az resource list --tag stack-name=$NETWORKING_PREFIX | ConvertFrom-Json)
+if (!$platformRes) {
+    throw "Unable to find eligible platform resources!"
+}
+if ($platformRes.Length -eq 0) {
+    throw "Unable to find 'ANY' eligible platform resources!"
+}
+
+$acr = ($platformRes | Where-Object { $_.type -eq "Microsoft.ContainerRegistry/registries" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
+if (!$acr) {
+    throw "Unable to find eligible platform container registry!"
+}
+$acrName = $acr.Name
+
+$strs = ($platformRes | Where-Object { $_.type -eq "Microsoft.Storage/storageAccounts" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
+if (!$strs) {
+    throw "Unable to find eligible platform storage account!"
+}
+$BuildAccountName = $strs.name
 
 # Step 1: Deploy DB.
 Invoke-Sqlcmd -InputFile "$AppCode\Db\Migrations.sql" -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $SqlPassword
@@ -52,7 +72,6 @@ else {
 helm repo update
 
 # Step 4b.
-
 az storage blob download-batch -d . -s certs --account-name $BuildAccountName
 
 kubectl create secret tls aks-ingress-tls `
@@ -73,19 +92,7 @@ $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persis
 # See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
 $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
-$platformRes = (az resource list --tag stack-name=$NETWORKING_PREFIX | ConvertFrom-Json)
-if (!$platformRes) {
-    throw "Unable to find eligible platform resources!"
-}
-if ($platformRes.Length -eq 0) {
-    throw "Unable to find 'ANY' eligible platform resources!"
-}
 
-$acr = ($platformRes | Where-Object { $_.type -eq "Microsoft.ContainerRegistry/registries" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
-if (!$acr) {
-    throw "Unable to find eligible platform container registry!"
-}
-$acrName = $acr.Name
 
 if ($UseServiceBus) {
     $QueueType = "ServiceBus";
@@ -143,13 +150,6 @@ Set-Content -Path ".\partnerapi.yaml" -Value $content
 kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
 
 # Step 9: Deploy backend
-
-$BuildAccountName
-$strs = ($platformRes | Where-Object { $_.type -eq "Microsoft.Storage/storageAccounts" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
-if (!$strs) {
-    throw "Unable to find eligible platform storage account!"
-}
-$BuildAccountName = $strs.name
 az storage blob download --file contoso-demo-storage-queue-func-v1.zip --container-name apps --name contoso-demo-storage-queue-func-v1.zip --account-name $BuildAccountName
 az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend --src "contoso-demo-storage-queue-func-v1.zip"
 if ($LastExitCode -ne 0) {
