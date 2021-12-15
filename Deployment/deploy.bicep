@@ -4,12 +4,6 @@ param branch string
 param location string
 @secure()
 param sqlPassword string
-// param aadTenantId string
-// param aadDomain string
-// @secure()
-// param aadClientId string
-// @secure()
-// param aadClientSecret string
 param kubernetesVersion string = '1.21.2'
 param subnetId string
 param aksMSIId string
@@ -46,8 +40,6 @@ resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = {
     supportsHttpsTrafficOnly: true
   }
 }
-
-//var strConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${stackName};AccountKey=${listKeys(str.id, str.apiVersion).keys[0].value};EndpointSuffix=core.windows.net'
 
 resource strqueue 'Microsoft.Storage/storageAccounts/queueServices@2021-04-01' = {
   name: 'default'
@@ -161,3 +153,100 @@ output aksName string = aks.name
 output sqlserver string = sql.properties.fullyQualifiedDomainName
 output sqlusername string = sqlUsername
 output dbname string = dbName
+
+var backendapp = '${stackName}backendapp'
+resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
+  name: backendapp
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    supportsHttpsTrafficOnly: true
+    allowBlobPublicAccess: false
+  }
+  tags: tags
+}
+
+resource backendappplan 'Microsoft.Web/serverfarms@2020-10-01' = {
+  name: backendapp
+  location: location
+  tags: tags
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+}
+
+var strConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${stackName};AccountKey=${listKeys(str.id, str.apiVersion).keys[0].value};EndpointSuffix=core.windows.net'
+var sqlConnectionString = 'Data Source=${sql.properties.fullyQualifiedDomainName};Initial Catalog=${dbName}; User Id=${sqlUsername};Password=${sqlPassword}'
+
+var backendappConnection = 'DefaultEndpointsProtocol=https;AccountName=${backendappStr.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(backendappStr.id, backendappStr.apiVersion).keys[0].value}'
+resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
+  name: backendapp
+  location: location
+  tags: tags
+  kind: 'functionapp'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    httpsOnly: true
+    serverFarmId: backendappplan.id
+    clientAffinityEnabled: true
+    siteConfig: {
+      webSocketsEnabled: true
+      appSettings: [
+        {
+          'name': 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          'value': appinsights.properties.InstrumentationKey
+        }
+        {
+          'name': 'DbConnectionString'
+          'value': sqlConnectionString
+        }
+        {
+          'name': 'AzureWebJobsDashboard'
+          'value': backendappConnection
+        }
+        {
+          'name': 'AzureWebJobsStorage'
+          'value': backendappConnection
+        }
+        {
+          'name': 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          'value': backendappConnection
+        }
+        {
+          'name': 'WEBSITE_CONTENTSHARE'
+          'value': 'functions2021'
+        }
+        {
+          'name': 'QueueName'
+          'value': queueName
+        }
+        {
+          'name': 'Connection'
+          'value': strConnectionString
+        }
+        {
+          'name': 'FUNCTIONS_WORKER_RUNTIME'
+          'value': 'dotnet'
+        }
+        {
+          'name': 'FUNCTIONS_EXTENSION_VERSION'
+          'value': '~3'
+        }
+        {
+          'name': 'ApplicationInsightsAgent_EXTENSION_VERSION'
+          'value': '~2'
+        }
+        {
+          'name': 'XDT_MicrosoftApplicationInsights_Mode'
+          'value': 'default'
+        }
+      ]
+    }
+  }
+}
