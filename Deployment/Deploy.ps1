@@ -48,7 +48,7 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
 kubectl apply -f .\$DeployCode\Deployment\external-ingress.yaml --namespace $namespace
 
 # Step 5: Setup configuration for resources
-$dbConnectionString = "Server=tcp:$SqlServer.database.windows.net,1433;Initial Catalog=appdb;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+$dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=appdb;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
 # See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
 $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
