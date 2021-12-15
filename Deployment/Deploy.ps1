@@ -9,6 +9,7 @@ param(
     [string]$SqlServer,
     [string]$SqlUsername,
     [string]$SqlPassword,
+    [string]$Backend,
     [switch]$UseServiceBus)
 
 $ErrorActionPreference = "Stop"
@@ -112,3 +113,17 @@ $content = $content.Replace('$SHIPPINGREPOSITORYTYPE', $QueueType)
 
 Set-Content -Path ".\partnerapi.yaml" -Value $content
 kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
+
+# Step 9: Deploy backend
+
+$BuildAccountName
+$strs = ($platformRes | Where-Object { $_.type -eq "Microsoft.Storage/storageAccounts" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
+if (!$strs) {
+    throw "Unable to find eligible platform storage account!"
+}
+$BuildAccountName = $strs.name
+az storage blob download --file contoso-demo-storage-queue-func-v1.zip --container-name apps --name contoso-demo-storage-queue-func-v1.zip --account-name $BuildAccountName
+az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend --src "contoso-demo-storage-queue-func-v1.zip"
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy backend."
+}

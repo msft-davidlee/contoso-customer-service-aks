@@ -78,4 +78,5 @@ jobs:
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
-          -SqlPassword ${{ secrets.SQLPASSWORD }}
+          -SqlPassword ${{ secrets.SQLPASSWORD }} `
+          -Backend ${{ steps.deploy.outputs.backend }}
