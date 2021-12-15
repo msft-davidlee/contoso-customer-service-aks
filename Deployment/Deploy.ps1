@@ -8,7 +8,8 @@ param(
     [string]$DbName,
     [string]$SqlServer,
     [string]$SqlUsername,
-    [string]$SqlPassword)
+    [string]$SqlPassword,
+    [switch]$UseServiceBus)
 
 $ErrorActionPreference = "Stop"
 # Prerequsites: 
@@ -65,6 +66,26 @@ if (!$acr) {
 }
 $acrName = $acr.Name
 
+
+if ($UseServiceBus) {
+    $QueueType = "ServiceBus";
+    $SenderQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
+        --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json
+    $ListenerQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
+        --namespace-name $AKS_NAME --name Listener --query primaryConnectionString | ConvertFrom-Json  
+        
+    $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
+    $ListenerQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
+}
+else {
+    $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $AKS_NAME | ConvertFrom-Json)[0].value
+    $QueueType = "Storage";
+    $connStr = "DefaultEndpointsProtocol=https;AccountName=$AKS_NAME;AccountKey=$key1;EndpointSuffix=core.windows.net"
+    $connStr = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
+    $SenderQueueConnectionString = $connStr;
+    $ListenerQueueConnectionString = $connStr;
+}
+
 # Step 6: Deploy customer service app.
 $content = Get-Content .\$DeployCode\Deployment\customerservice.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
@@ -73,3 +94,21 @@ $content = $content.Replace('$NAMESPACE', $namespace)
 
 Set-Content -Path ".\customerservice.yaml" -Value $content
 kubectl apply -f ".\customerservice.yaml" --namespace $namespace
+
+# Step 7: Deploy Alternate Id service.
+$content = Get-Content .\$DeployCode\Deployment\alternateid.yaml
+$content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
+$content = $content.Replace('$ACRNAME', $acrName)
+
+Set-Content -Path ".\alternateid.yaml" -Value $content
+kubectl apply -f ".\alternateid.yaml" --namespace $namespace
+
+# Step 8: Deploy Partner api.
+$content = Get-Content .\$DeployCode\Deployment\partnerapi.yaml
+$content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
+$content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$SENDERQUEUECONNECTIONSTRING', $acrName)
+$content = $content.Replace('$SHIPPINGREPOSITORYTYPE', $QueueType)
+
+Set-Content -Path ".\partnerapi.yaml" -Value $content
+kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
