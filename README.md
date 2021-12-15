@@ -28,5 +28,10 @@ To create this, you will need to follow build the application. Follow the guidan
 | SQLPASSWORD | SQL password that you want to use |
 | NETWORKING_PREFIX | Network stack-name tag with the specific value |
 
+8. Login via ``` az login ``` into Azure and then login to AKS with ``` az aks get-credentials -n <AKS_NAME> -g <AKS_GROUP_NAME> ```
+9. There's a manual command you need to execute in order for AKS to connect successfully to ACR. ``` az aks update -n <AKS_NAME> -g aks-dev --attach-acr <ACR_NAME> ```
+10. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n <AKS_NAME> -g <AKS_GROUP_NAME> --acr <ACR_NAME>.azurecr.io ```
+11. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
+
 ## Have an issue?
 You are welcome to create an issue if you need help but please note that there is no timeline to answer or resolve any issues you have with the contents of this project. Use the contents of this project at your own risk! If you are interested to volunteer to maintain this, please feel free to reach out to be added as a contributor and send Pull Requests (PR).
