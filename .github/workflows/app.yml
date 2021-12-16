@@ -5,11 +5,11 @@ on:
       environmentselector:
         description: "Environment selector"
         required: false
-        default: "default"
+        default: default
       prefix:
-        description: "Prefix"
+        description: Prefix
         required: false
-        default: "default"
+        default: default
 
 jobs:
   setup:
