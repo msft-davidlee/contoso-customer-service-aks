@@ -8,8 +8,7 @@ on:
         default: "default"
       prefix:
         description: "Prefix"
-        required: true
-        default: ${{ secrets.PREFIX }}       
+        required: false
 
 jobs:
   setup:
