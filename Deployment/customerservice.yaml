@@ -25,7 +25,7 @@ spec:
           secretName: dotfile-secret
       containers:
       - name: customerservice
-        image: $ACRNAME.azurecr.io/contoso-demo-website:v2
+        image: $ACRNAME.azurecr.io/contoso-demo-website:v2.1
         resources:
           requests:
             cpu: 100m
@@ -35,7 +35,6 @@ spec:
             memory: 256Mi
         ports:
         - containerPort: 80
-        - containerPort: 443
         volumeMounts:
             - name: secret-volume
               readOnly: true
@@ -63,8 +62,8 @@ spec:
           value: $AADCLIENTID
         - name: AzureAd__ClientSecret
           value: $AADCLIENTSECRET
-        - name: ASPNETCORE_HTTPS_PORT
-          value: "443"
+        - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+          value: "true"
 ---
 apiVersion: v1
 kind: Service
@@ -73,9 +72,6 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - name: http
-    port: 80
-  - name: https
-    port: 443
+  - port: 80
   selector:
     app: customerservice
