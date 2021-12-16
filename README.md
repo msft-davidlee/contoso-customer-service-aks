@@ -38,7 +38,17 @@ To create this, you will need to follow build the application. Follow the guidan
 
 # Take Note
 1. NSG applied on your AKS Subnet may be impacting access to the site. Be sure to open both ports 80 and 443.
-2. Remember to add the URL of Frontdoor to your AAD app registration for redirect purposes.
+3. You may have notice the following configuration in external-ingress.yaml
+
+```
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "4" 
+```
+
+This is related to the authentication redirect back from AAD to Ngix and it does not by default handle a large header content. For more information, see: https://stackoverflow.com/questions/48964429/net-core-behind-nginx-returns-502-bad-gateway-after-authentication-by-identitys.
+
+4. You may have notice the following configuration applied on the container environment of Customer Service, ASPNETCORE_FORWARDEDHEADERS_ENABLED. This is related to ensuring that the https protocol can be applied by ASP.NET core authentication middleware. By default, without this, the uri_redirect will be http instead of https because the container is listening on port 80 and it means it will not work properly. To fix this, we apply the ASPNETCORE_FORWARDEDHEADERS_ENABLED configuration. For more information, see: https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-6.0#forward-the-scheme-for-linux-and-non-iis-reverse-proxies.
 
 ## Have an issue?
 You are welcome to create an issue if you need help but please note that there is no timeline to answer or resolve any issues you have with the contents of this project. Use the contents of this project at your own risk! If you are interested to volunteer to maintain this, please feel free to reach out to be added as a contributor and send Pull Requests (PR).
