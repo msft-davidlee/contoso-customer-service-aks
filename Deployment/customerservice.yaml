@@ -63,7 +63,7 @@ spec:
         - name: AzureAd__ClientSecret
           value: $AADCLIENTSECRET
         - name: ASPNETCORE_HTTPS_PORT
-          value: 443
+          value: "443"
 ---
 apiVersion: v1
 kind: Service
