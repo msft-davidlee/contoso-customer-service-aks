@@ -9,6 +9,7 @@ on:
       prefix:
         description: "Prefix"
         required: false
+        default: "default"
 
 jobs:
   setup:
@@ -19,10 +20,12 @@ jobs:
         name: Setup Environment Setp
         run: |
           $prefix = "${{ github.event.inputs.prefix }}"
-          if ($perfix -eq '') {            
+          if ($perfix -eq 'default') {            
+            Write-Host "Using secret for prefix"
             echo "::set-output name=prefix::${{ secrets.PREFIX }}" 
           }
           else {
+            Write-Host "Using input for prefix"
             echo "::set-output name=prefix::$prefix" 
           }
           Write-Host "Prefix: ${{ github.event.inputs.prefix }}"
