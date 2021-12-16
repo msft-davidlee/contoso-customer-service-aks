@@ -6,6 +6,10 @@ on:
         description: "Environment selector"
         required: false
         default: "default"
+      prefix:
+        description: "Prefix"
+        required: true
+        default: ${{ secrets.PREFIX }}       
 
 jobs:
   setup:
@@ -15,6 +19,7 @@ jobs:
       - id: setup
         name: Setup Environment Setp
         run: |
+          Write-Host "Prefix: ${{ github.event.inputs.prefix }}"
           $envSelector = "${{ github.event.inputs.environmentselector }}"
           Write-Host "Environment Selector: $envSelector Branch ${{ github.ref }}"
           if ($envSelector -eq '' -or $envSelector -eq 'default') {            
