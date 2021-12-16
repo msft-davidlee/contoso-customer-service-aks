@@ -15,21 +15,24 @@ jobs:
     runs-on: windows-latest
     steps:
       - id: setup
-        name: Setup Environment Setp
+        name: Setup Environment
         run: |
           $prefix = "${{ github.event.inputs.prefix }}"
           if ($prefix -eq '') {            
             Write-Host "Using secret for prefix"
-            echo "::set-output name=prefix::${{ secrets.PREFIX }}" 
+            $prefix = "${{ secrets.PREFIX }}"
+            if ($prefix -eq '') {
+              throw "secrets.PREFIX is not configured!"
+            }
           }
           else {
-            Write-Host "Using input for prefix"
-            echo "::set-output name=prefix::$prefix" 
+            Write-Host "Using input for prefix"            
           }          
+          echo "::set-output name=prefix::$prefix"
           $envSelector = "${{ github.event.inputs.environmentselector }}"
           Write-Host "Environment Selector: $envSelector Branch ${{ github.ref }}"
           if ($envSelector -eq '') {
-            Write-Host "Using github.ref choosing build_env"          
+            Write-Host "Using github.ref for choosing build_env"          
             if ('${{ github.ref }}' -eq 'refs/heads/main') { 
               echo "::set-output name=build_env::prod"              
             } else {
