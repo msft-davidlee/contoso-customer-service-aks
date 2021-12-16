@@ -37,7 +37,7 @@ To create this, you will need to follow build the application. Follow the guidan
 14. Update your local host file to point to the public ip.
 
 # Take Note
-1. NSG applied on your AKS Subnet may be impacting access to the site.
+1. NSG applied on your AKS Subnet may be impacting access to the site. Be sure to open both ports 80 and 443.
 2. Remember to add the URL of Frontdoor to your AAD app registration for redirect purposes.
 
 ## Have an issue?

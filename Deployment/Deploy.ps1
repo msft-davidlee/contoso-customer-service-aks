@@ -87,14 +87,17 @@ if (!$testSecret) {
     
 # Step 4c. Install ingress controller
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
-kubectl apply -f .\$DeployCode\Deployment\external-ingress.yaml --namespace $namespace
+
+$content = Get-Content .\$DeployCode\Deployment\external-ingress.yaml
+# Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\external-ingress.yaml" -Value $content
+kubectl apply -f .\external-ingress.yaml --namespace $namespace
 
 # Step 5: Setup configuration for resources
 $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
 # See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
 $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
-
-
 
 if ($UseServiceBus) {
     $QueueType = "ServiceBus";
