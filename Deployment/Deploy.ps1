@@ -181,7 +181,7 @@ if ($QueueType -eq "Storage") {
     $backendZip = "contoso-demo-storage-queue-func-v1.zip"
 }
 
-az storage blob download --file contoso-demo-storage-queue-func-v1.zip --container-name apps --name $backendZip --account-name $BuildAccountName
+az storage blob download --file $backendZip --container-name apps --name $backendZip --account-name $BuildAccountName
 az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend --src $backendZip
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy backend."
