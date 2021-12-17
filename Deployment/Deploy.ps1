@@ -93,9 +93,9 @@ $content = Get-Content .\$DeployCode\Deployment\external-ingress.yaml
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
 $content = $content.Replace('$NAMESPACE', $namespace)
 Set-Content -Path ".\external-ingress.yaml" -Value $content
-kubectl apply -f .\external-ingress.yaml --namespace $namespace
+$rawOut = (kubectl apply -f .\external-ingress.yaml --namespace $namespace 2>&1)
 if ($LastExitCode -ne 0) {
-    $errorMsg = $Error -Join '`n'
+    $errorMsg = $rawOut -Join '`n'
     if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
         Write-Host "Attempting to recover from 'failed calling webhook' error."
 
