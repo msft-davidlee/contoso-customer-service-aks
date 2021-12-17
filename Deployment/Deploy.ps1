@@ -15,15 +15,12 @@ param(
     [string]$AAD_TENANT_ID,
     [string]$AAD_CLIENT_ID,
     [string]$AAD_CLIENT_SECRET,
-    [string]$QueueType)
+    [string]$QueueType,
+    [bool]$EnableFrontdoor)
 
 $ErrorActionPreference = "Stop"
 
-if (!$QueueType -or $QueueType -eq "") { 
-    throw "QueueType is required!"
-}
-
-Write-Host "Queue type: $QueueType"
+Write-Host "Enable frontdoor: $EnableFrontdoor"
 
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
