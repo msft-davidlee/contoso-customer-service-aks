@@ -95,7 +95,7 @@ $content = $content.Replace('$NAMESPACE', $namespace)
 Set-Content -Path ".\external-ingress.yaml" -Value $content
 kubectl apply -f .\external-ingress.yaml --namespace $namespace
 if ($LastExitCode -ne 0) {
-    $errorMsg = $Error[0]
+    $errorMsg = $Error -Join '`n'
     if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
         Write-Host "Attempting to recover from 'failed calling webhook' error."
 
