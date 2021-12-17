@@ -126,4 +126,4 @@ jobs:
           -AAD_CLIENT_ID ${{ secrets.AAD_CLIENT_ID }} `
           -AAD_CLIENT_SECRET ${{ secrets.AAD_CLIENT_SECRET }} `
           -QueueType ${{ steps.resolve-inputs.outputs.queuetype }} `
-          -EnableFrontdoor ${{ github.event.inputs.enablefrontdoor }}
+          -EnableFrontdoor ${{ github.event.inputs.enablefrontdoor == 'true' }}
