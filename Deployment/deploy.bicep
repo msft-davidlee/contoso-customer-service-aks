@@ -7,6 +7,7 @@ param sqlPassword string
 param kubernetesVersion string = '1.21.2'
 param subnetId string
 param aksMSIId string
+param queueType string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -28,7 +29,7 @@ resource appinsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = {
+resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = if (queueType == 'Storage') {
   name: stackName
   location: location
   tags: tags
@@ -41,15 +42,62 @@ resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   }
 }
 
-resource strqueue 'Microsoft.Storage/storageAccounts/queueServices@2021-04-01' = {
+resource strqueue 'Microsoft.Storage/storageAccounts/queueServices@2021-04-01' = if (queueType == 'Storage') {
   name: 'default'
   parent: str
 }
 
 var queueName = 'orders'
-resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@2021-04-01' = {
+resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@2021-04-01' = if (queueType == 'Storage') {
   name: queueName
   parent: strqueue
+}
+
+resource sbu 'Microsoft.ServiceBus/namespaces@2021-11-01' = if (queueType == 'ServiceBus') {
+  name: stackName
+  location: location
+  tags: tags
+  sku: {
+    name: 'Basic'
+  }
+}
+
+resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
+  parent: sbu
+  name: 'Sender'
+  properties: {
+    rights: [
+      'Send'
+    ]
+  }
+}
+
+resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
+  parent: sbu
+  name: 'Listener'
+  properties: {
+    rights: [
+      'Listen'
+    ]
+  }
+}
+
+resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = if (queueType == 'ServiceBus') {
+  parent: sbu
+  name: 'orders'
+  properties: {
+    lockDuration: 'PT30S'
+    maxSizeInMegabytes: 1024
+    requiresDuplicateDetection: false
+    requiresSession: false
+    defaultMessageTimeToLive: 'P14D'
+    deadLetteringOnMessageExpiration: false
+    enableBatchedOperations: true
+    duplicateDetectionHistoryTimeWindow: 'PT10M'
+    maxDeliveryCount: 10
+    enablePartitioning: false
+    enableExpress: false
+  }
 }
 
 var sqlUsername = 'app'
@@ -179,7 +227,7 @@ resource backendappplan 'Microsoft.Web/serverfarms@2020-10-01' = {
   }
 }
 
-var strConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${stackName};AccountKey=${listKeys(str.id, str.apiVersion).keys[0].value};EndpointSuffix=core.windows.net'
+var queueConnectionString = (queueType == 'Storage') ? 'DefaultEndpointsProtocol=https;AccountName=${stackName};AccountKey=${listKeys(str.id, str.apiVersion).keys[0].value};EndpointSuffix=core.windows.net' : '${listKeys(sbuSenderAuthRule.id, sbu.apiVersion).primaryKey}'
 var sqlConnectionString = 'Data Source=${sql.properties.fullyQualifiedDomainName};Initial Catalog=${dbName}; User Id=${sqlUsername};Password=${sqlPassword}'
 
 var backendappConnection = 'DefaultEndpointsProtocol=https;AccountName=${backendappStr.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(backendappStr.id, backendappStr.apiVersion).keys[0].value}'
@@ -228,7 +276,7 @@ resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
         }
         {
           'name': 'Connection'
-          'value': strConnectionString
+          'value': queueConnectionString
         }
         {
           'name': 'FUNCTIONS_WORKER_RUNTIME'
