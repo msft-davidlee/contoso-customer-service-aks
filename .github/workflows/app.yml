@@ -10,7 +10,6 @@ on:
         required: false
       queuetype:
         description: 'Queue Type'
-        default: 'Storage'   
         required: true
         type: choice
         options:
@@ -78,6 +77,15 @@ jobs:
               Write-Host "Using input for prefix"            
           }          
           echo "::set-output name=prefix::$prefix"
+          $queuetype = "${{ github.event.inputs.queuetype }}"
+          if ($queuetype -eq '') {            
+              Write-Host "Using default for queuetype"
+              $queuetype = "Storage"
+          }
+          else {
+              Write-Host "Using input for queuetype"            
+          }          
+          echo "::set-output name=queuetype::$queuetype"
 
       - id: resolve-network
         name: Resolve network
@@ -113,4 +121,4 @@ jobs:
           -AAD_DOMAIN ${{ secrets.AAD_DOMAIN }} `
           -AAD_CLIENT_ID ${{ secrets.AAD_CLIENT_ID }} `
           -AAD_CLIENT_SECRET ${{ secrets.AAD_CLIENT_SECRET }} `
-          -QueueType ${{ github.event.inputs.queuetype }}
+          -QueueType ${{ steps.resolve-inputs.outputs.queuetype }}
