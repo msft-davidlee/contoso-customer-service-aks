@@ -54,7 +54,7 @@ resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@20
   parent: strqueue
 }
 
-resource sbu 'Microsoft.ServiceBus/namespaces@2021-11-01' = if (queueType == 'ServiceBus') {
+resource sbu 'Microsoft.ServiceBus/namespaces@2021-06-01-preview' = if (queueType == 'ServiceBus') {
   name: stackName
   location: location
   tags: tags
@@ -63,7 +63,7 @@ resource sbu 'Microsoft.ServiceBus/namespaces@2021-11-01' = if (queueType == 'Se
   }
 }
 
-resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
+resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-06-01-preview' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: 'Sender'
   properties: {
@@ -73,7 +73,7 @@ resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2
   }
 }
 
-resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
+resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-06-01-preview' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: 'Listener'
   properties: {
@@ -83,7 +83,7 @@ resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2
   }
 }
 
-resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = if (queueType == 'ServiceBus') {
+resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-06-01-preview' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: 'orders'
   properties: {
