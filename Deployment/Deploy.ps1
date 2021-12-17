@@ -118,12 +118,8 @@ $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UT
 
 if ($QueueType -eq "ServiceBus") { 
     $SenderQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
-        --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json
-    $ListenerQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
-        --namespace-name $AKS_NAME --name Listener --query primaryConnectionString | ConvertFrom-Json  
-        
+        --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json    
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
-    $ListenerQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
 }
 
 if ($QueueType -eq "Storage") {
@@ -131,7 +127,6 @@ if ($QueueType -eq "Storage") {
     $connStr = "DefaultEndpointsProtocol=https;AccountName=$AKS_NAME;AccountKey=$key1;EndpointSuffix=core.windows.net"
     $connStr = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
     $SenderQueueConnectionString = $connStr;
-    $ListenerQueueConnectionString = $connStr;
 }
 
 # Step 6: Deploy customer service app.

@@ -90,6 +90,8 @@ jobs:
               Write-Host "Using input for queuetype"            
           }          
           echo "::set-output name=queuetype::$queuetype"
+          $deploymentName = Get-Date -Format "yyyyMMddhhmmss"
+          echo "::set-output name=deploymentname::$deploymentName"
 
       - id: resolve-network
         name: Resolve network
@@ -101,6 +103,7 @@ jobs:
         id: deploy
         uses: azure/arm-deploy@v1
         with:
+          deploymentName: 'aksdeploy${{ steps.resolve-inputs.outputs.deploymentname }}'
           resourceGroupName: ${{ env.RESOURCE_GROUP_NAME }}
           template: ./main/deployment/deploy.bicep
           parameters: location=${{ steps.resolve-network.outputs.location }} prefix=${{ steps.resolve-inputs.outputs.prefix }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} sqlPassword=${{ secrets.SQLPASSWORD }} subnetId=${{ steps.resolve-network.outputs.subnetId }} aksMSIId=${{ secrets.AKS_MSI_ID }} queueType=${{ steps.resolve-inputs.outputs.queuetype }} enableFrontdoor=${{ github.event.inputs.enablefrontdoor == 'true' }}
