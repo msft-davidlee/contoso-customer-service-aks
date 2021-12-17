@@ -15,12 +15,9 @@ param(
     [string]$AAD_TENANT_ID,
     [string]$AAD_CLIENT_ID,
     [string]$AAD_CLIENT_SECRET,
-    [string]$QueueType,
-    [bool]$EnableFrontdoor)
+    [string]$QueueType)
 
 $ErrorActionPreference = "Stop"
-
-Write-Host "Enable frontdoor: $EnableFrontdoor"
 
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
@@ -98,7 +95,20 @@ $content = $content.Replace('$NAMESPACE', $namespace)
 Set-Content -Path ".\external-ingress.yaml" -Value $content
 kubectl apply -f .\external-ingress.yaml --namespace $namespace
 if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to deploy external ingress."
+    $errorMsg = $Error[0]
+    if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
+        Write-Host "Attempting to recover from 'failed calling webhook' error."
+
+        # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
+        kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
+        kubectl apply -f .\external-ingress.yaml --namespace $namespace
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to deploy external ingress."
+        }
+    }
+    else {
+        throw "An error has occured. Unable to deploy external ingress."
+    }    
 }
 
 # Step 5: Setup configuration for resources
