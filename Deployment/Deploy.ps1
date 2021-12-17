@@ -15,9 +15,16 @@ param(
     [string]$AAD_TENANT_ID,
     [string]$AAD_CLIENT_ID,
     [string]$AAD_CLIENT_SECRET,
-    [switch]$UseServiceBus)
+    [string]$QueueType)
 
 $ErrorActionPreference = "Stop"
+
+if (!$QueueType -or $QueueType -eq "") { 
+    throw "QueueType is required!"
+}
+
+Write-Host "Queue type: $QueueType"
+
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
@@ -93,14 +100,16 @@ $content = Get-Content .\$DeployCode\Deployment\external-ingress.yaml
 $content = $content.Replace('$NAMESPACE', $namespace)
 Set-Content -Path ".\external-ingress.yaml" -Value $content
 kubectl apply -f .\external-ingress.yaml --namespace $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy external ingress."
+}
 
 # Step 5: Setup configuration for resources
 $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
 # See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
 $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
-if ($UseServiceBus) {
-    $QueueType = "ServiceBus";
+if ($QueueType -eq "ServiceBus") { 
     $SenderQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
         --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json
     $ListenerQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
@@ -109,9 +118,9 @@ if ($UseServiceBus) {
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
     $ListenerQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
 }
-else {
+
+if ($QueueType -eq "Storage") {
     $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $AKS_NAME | ConvertFrom-Json)[0].value
-    $QueueType = "Storage";
     $connStr = "DefaultEndpointsProtocol=https;AccountName=$AKS_NAME;AccountKey=$key1;EndpointSuffix=core.windows.net"
     $connStr = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
     $SenderQueueConnectionString = $connStr;

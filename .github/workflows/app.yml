@@ -3,11 +3,19 @@ on:
   workflow_dispatch:
     inputs:
       environmentselector:
-        description: "Environment selector"
+        description: 'Environment selector'
         required: false
       prefix:
         description: Prefix
         required: false
+      queuetype:
+        description: 'Queue Type'
+        default: 'Storage'   
+        required: true
+        type: choice
+        options:
+        - ServiceBus
+        - Storage        
 
 jobs:
   setup:
@@ -104,4 +112,5 @@ jobs:
           -AAD_TENANT_ID ${{ secrets.AAD_TENANT_ID }} `
           -AAD_DOMAIN ${{ secrets.AAD_DOMAIN }} `
           -AAD_CLIENT_ID ${{ secrets.AAD_CLIENT_ID }} `
-          -AAD_CLIENT_SECRET ${{ secrets.AAD_CLIENT_SECRET }}
+          -AAD_CLIENT_SECRET ${{ secrets.AAD_CLIENT_SECRET }} `
+          -QueueType ${{ github.event.inputs.queuetype }}
