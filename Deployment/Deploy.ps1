@@ -15,7 +15,8 @@ param(
     [string]$AAD_TENANT_ID,
     [string]$AAD_CLIENT_ID,
     [string]$AAD_CLIENT_SECRET,
-    [string]$QueueType)
+    [string]$QueueType,
+    [bool]$EnableFrontdoor)
 
 $ErrorActionPreference = "Stop"
 
@@ -89,7 +90,13 @@ if (!$testSecret) {
 # Step 4c. Install ingress controller
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
 
-$content = Get-Content .\$DeployCode\Deployment\external-ingress.yaml
+if ($EnableFrontdoor) {
+    $content = Get-Content .\$DeployCode\Deployment\external-ingress-with-fd.yaml
+}
+else {
+    $content = Get-Content .\$DeployCode\Deployment\external-ingress.yaml    
+}
+
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
 $content = $content.Replace('$NAMESPACE', $namespace)
 Set-Content -Path ".\external-ingress.yaml" -Value $content
@@ -166,8 +173,16 @@ Set-Content -Path ".\partnerapi.yaml" -Value $content
 kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
 
 # Step 9: Deploy backend
-az storage blob download --file contoso-demo-storage-queue-func-v1.zip --container-name apps --name contoso-demo-storage-queue-func-v1.zip --account-name $BuildAccountName
-az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend --src "contoso-demo-storage-queue-func-v1.zip"
+if ($QueueType -eq "ServiceBus") { 
+    $backendZip = contoso-demo-service-bus-shipping-func-v1.zip
+}
+
+if ($QueueType -eq "Storage") {
+    $backendZip = contoso-demo-storage-queue-func-v1.zip
+}
+
+az storage blob download --file contoso-demo-storage-queue-func-v1.zip --container-name apps --name $backendZip --account-name $BuildAccountName
+az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend --src $backendZip
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy backend."
 }
