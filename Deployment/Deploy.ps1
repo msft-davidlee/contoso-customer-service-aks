@@ -174,11 +174,11 @@ kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
 
 # Step 9: Deploy backend
 if ($QueueType -eq "ServiceBus") { 
-    $backendZip = contoso-demo-service-bus-shipping-func-v1.zip
+    $backendZip = "contoso-demo-service-bus-shipping-func-v1.zip"
 }
 
 if ($QueueType -eq "Storage") {
-    $backendZip = contoso-demo-storage-queue-func-v1.zip
+    $backendZip = "contoso-demo-storage-queue-func-v1.zip"
 }
 
 az storage blob download --file contoso-demo-storage-queue-func-v1.zip --container-name apps --name $backendZip --account-name $BuildAccountName
