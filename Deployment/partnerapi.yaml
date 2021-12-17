@@ -51,6 +51,8 @@ spec:
           value: orders
         - name: ShippingRepositoryType
           value: $SHIPPINGREPOSITORYTYPE
+        - name: DisableQueueDelay
+          value: "true"       
 ---
 apiVersion: v1
 kind: Service
