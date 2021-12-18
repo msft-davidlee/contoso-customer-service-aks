@@ -8,7 +8,6 @@ param kubernetesVersion string = '1.21.2'
 param subnetId string
 param aksMSIId string
 param queueType string
-param enableFrontdoor bool
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -301,10 +300,4 @@ resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
 }
 output backend string = backendapp
 output aadinstance string = environment().authentication.loginEndpoint
-
-resource afd 'Microsoft.Network/frontDoors@2020-05-01' = if (enableFrontdoor) {
-  name: stackName
-  location: location
-  tags: tags
-  properties: {}
-}
+output stackname string = stackName
