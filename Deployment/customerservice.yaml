@@ -64,6 +64,8 @@ spec:
           value: $AADCLIENTSECRET
         - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
           value: "true"
+        - name: AllowedHosts
+          value: $ALLOWEDHOSTS
 ---
 apiVersion: v1
 kind: Service
