@@ -1,5 +1,4 @@
 param stackName string
-param location string
 param appEnvironment string
 param branch string
 param serviceIP string

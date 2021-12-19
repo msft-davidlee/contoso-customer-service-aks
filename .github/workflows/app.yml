@@ -139,4 +139,4 @@ jobs:
           deploymentName: 'aksdeployfd${{ steps.resolve-inputs.outputs.deploymentname }}'
           resourceGroupName: ${{ env.RESOURCE_GROUP_NAME }}
           template: ./main/deployment/frontdoor.bicep
-          parameters: location=${{ steps.resolve-network.outputs.location }} stackName=${{ steps.deploy.outputs.stackname }}  appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} serviceIP=${{ steps.appsdeploy.outputs.serviceip }} 
+          parameters: stackName=${{ steps.deploy.outputs.stackname }}  appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} serviceIP=${{ steps.appsdeploy.outputs.serviceip }} 
