@@ -25,7 +25,7 @@ spec:
           secretName: dotfile-secret
       containers:
       - name: customerservice
-        image: $ACRNAME.azurecr.io/contoso-demo-website:v2.3
+        image: $ACRNAME.azurecr.io/contoso-demo-website:v2.1
         resources:
           requests:
             cpu: 100m
@@ -64,8 +64,6 @@ spec:
           value: $AADCLIENTSECRET
         - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
           value: "true"
-        - name: OverrideHostProtocolWithHttps
-          value: $OVERRIDEHOSTPROTOCOLWITHHTTPS
 ---
 apiVersion: v1
 kind: Service

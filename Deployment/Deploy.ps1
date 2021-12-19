@@ -148,13 +148,6 @@ $content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
 $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
 
-if ($EnableFrontdoor) {
-    $content = $content.Replace('$OVERRIDEHOSTPROTOCOLWITHHTTPS', "$AKS_NAME.azurefd.net")
-}
-else {
-    $content = $content.Replace('$OVERRIDEHOSTPROTOCOLWITHHTTPS', '')
-}
-
 Set-Content -Path ".\customerservice.yaml" -Value $content
 kubectl apply -f ".\customerservice.yaml" --namespace $namespace
 if ($LastExitCode -ne 0) {
