@@ -186,3 +186,6 @@ az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend -
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy backend."
 }
+
+$serviceip = kubectl get ing demo-ingress -n myapps -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+Write-Host "::set-output name=serviceip::$serviceip"
