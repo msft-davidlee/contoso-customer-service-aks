@@ -49,7 +49,7 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
     backendPools: [
       {
         name: backendPoolName
-        properties: {
+        properties: {        
           backends: [
             {
               address: serviceIP
@@ -57,7 +57,7 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
               httpsPort: 443
               priority: 1
               weight: 50
-              backendHostHeader: serviceIP
+              backendHostHeader: '${stackName}.azurefd.net'           
             }
           ]
           loadBalancingSettings: {
