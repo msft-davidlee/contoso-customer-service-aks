@@ -94,7 +94,6 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
           }
           enabledState: 'Enabled'
         }
-        }
       }
     ]
   }
