@@ -79,14 +79,14 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
             }
           ]
           acceptedProtocols: [
-            'Http'
+            'Https'
           ]
           patternsToMatch: [
             '/*'
           ]
           routeConfiguration: {
             '@odata.type': '#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration'
-            forwardingProtocol: 'HttpsOnly'
+            forwardingProtocol: 'HttpOnly'
             backendPool: {
               id: resourceId('Microsoft.Network/frontDoors/backendPools', stackName, backendPoolName)
             }
