@@ -149,10 +149,10 @@ $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
 
 if ($EnableFrontdoor) {
-    $content = $content.Replace('$ALLOWEDHOSTS', "$AKS_NAME.azurefd.net")
+    $content = $content.Replace('$OVERRIDEHOSTPROTOCOLWITHHTTPS', "$AKS_NAME.azurefd.net")
 }
 else {
-    $content = $content.Replace('$ALLOWEDHOSTS', '')
+    $content = $content.Replace('$OVERRIDEHOSTPROTOCOLWITHHTTPS', '')
 }
 
 Set-Content -Path ".\customerservice.yaml" -Value $content
