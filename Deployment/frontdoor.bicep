@@ -13,7 +13,8 @@ var tags = {
 var frontendEndpointName = '${stackName}-azurefd-net'
 var backendPoolName = 'demowebsite'
 resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
-  name: stackName  
+  name: stackName
+  location: 'global'
   tags: tags
   properties: {
     healthProbeSettings: [
