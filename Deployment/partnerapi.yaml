@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dotfile-secret
+data:
+  .secret-file: "$BASE64CONNECTIONSTRING"
+  .sender-queue-connection-file: "$SENDERQUEUECONNECTIONSTRING"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partnerapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: partnerapi
+  template:
+    metadata:
+      labels:
+        app: partnerapi
+    spec:
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: dotfile-secret
+      containers:
+      - name: partnerapi
+        image: $ACRNAME.azurecr.io/contoso-demo-partner-api:v2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+        volumeMounts:
+            - name: secret-volume
+              readOnly: true
+              mountPath: "/etc/secret-volume"
+        env:
+        - name: DbConnectionString
+          value: FilePath=/etc/secret-volume/.secret-file
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: QueueConnectionString
+          value: FilePath=/etc/secret-volume/.sender-queue-connection-file
+        - name: QueueName
+          value: orders
+        - name: ShippingRepositoryType
+          value: $SHIPPINGREPOSITORYTYPE
+        - name: DisableQueueDelay
+          value: "true"       
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: partnerapi
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+  selector:
+    app: partnerapi
