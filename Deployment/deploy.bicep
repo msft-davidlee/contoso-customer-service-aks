@@ -4,7 +4,7 @@ param branch string
 param location string
 @secure()
 param sqlPassword string
-param kubernetesVersion string = '1.21.2'
+param kubernetesVersion string = '1.23.3'
 param subnetId string
 param aksMSIId string
 param queueType string
