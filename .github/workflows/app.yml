@@ -106,7 +106,7 @@ jobs:
           .\Deployment\Deploy.ps1 `
           -AKS_RESOURCE_GROUP ${{ secrets.RESOURCE_GROUP }} `
           -AKS_NAME ${{ steps.deploy.outputs.aksName }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `          
+          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
