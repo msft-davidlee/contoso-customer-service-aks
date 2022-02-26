@@ -8,7 +8,7 @@ if (!$platformRes) {
 if ($platformRes.Length -eq 0) {
     throw "Unable to find 'ANY' eligible Virtual Network resource!"
 }
-$vnet = ($platformRes | Where-Object { $_.type -eq "Microsoft.Network/virtualNetworks" -and $_.tags.'stack-environment' -eq $BUILD_ENV })
+$vnet = ($platformRes | Where-Object { $_.type -eq "Microsoft.Network/virtualNetworks" -and $_.name.Contains("-pri-") -and $_.tags.'stack-environment' -eq $BUILD_ENV })
 if (!$vnet) {
     throw "Unable to find Virtual Network resource!"
 }
