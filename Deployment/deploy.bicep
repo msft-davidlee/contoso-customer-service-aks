@@ -4,17 +4,18 @@ param branch string
 param location string
 @secure()
 param sqlPassword string
-param kubernetesVersion string = '1.21.2'
+param kubernetesVersion string = '1.23.3'
 param subnetId string
 param aksMSIId string
 param queueType string
+param version string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
-  'stack-name': stackName
-  'environment': appEnvironment
-  'branch': branch
-  'team': 'platform'
+  'stack-name': 'contoso-customer-service-aks'
+  'stack-environment': appEnvironment
+  'stack-branch': branch
+  'stack-version': version
 }
 
 resource appinsights 'Microsoft.Insights/components@2020-02-02' = {

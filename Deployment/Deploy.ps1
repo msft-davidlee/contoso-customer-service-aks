@@ -1,10 +1,7 @@
 param(
-    [string]$AKS_RESOURCE_GROUP,
-    [string]$AKS_NAME,
-    [string]$NETWORKING_PREFIX,
+    [string]$AKS_RESOURCE_GROUP,    
+    [string]$AKS_NAME,    
     [string]$BUILD_ENV,
-    [string]$AppCode,
-    [string]$DeployCode,
     [string]$DbName,
     [string]$SqlServer,
     [string]$SqlUsername,
@@ -23,7 +20,7 @@ $ErrorActionPreference = "Stop"
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
-$platformRes = (az resource list --tag stack-name=$NETWORKING_PREFIX | ConvertFrom-Json)
+$platformRes = (az resource list --tag stack-name=platform | ConvertFrom-Json)
 if (!$platformRes) {
     throw "Unable to find eligible platform resources!"
 }
@@ -31,20 +28,21 @@ if ($platformRes.Length -eq 0) {
     throw "Unable to find 'ANY' eligible platform resources!"
 }
 
-$acr = ($platformRes | Where-Object { $_.type -eq "Microsoft.ContainerRegistry/registries" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
+$acr = ($platformRes | Where-Object { $_.type -eq "Microsoft.ContainerRegistry/registries" -and $_.tags.'stack-environment' -eq 'prod' })
 if (!$acr) {
     throw "Unable to find eligible platform container registry!"
 }
 $acrName = $acr.Name
 
-$strs = ($platformRes | Where-Object { $_.type -eq "Microsoft.Storage/storageAccounts" -and $_.resourceGroup.EndsWith("-$BUILD_ENV") })
+$strs = ($platformRes | Where-Object { $_.type -eq "Microsoft.Storage/storageAccounts" -and $_.tags.'stack-environment' -eq 'prod' })
 if (!$strs) {
     throw "Unable to find eligible platform storage account!"
 }
 $BuildAccountName = $strs.name
 
 # Step 1: Deploy DB.
-Invoke-Sqlcmd -InputFile "$AppCode\Db\Migrations.sql" -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $SqlPassword
+az storage blob download --file "Migrations.sql" --container-name apps --name "Migrations.sql" --account-name $BuildAccountName
+Invoke-Sqlcmd -InputFile "Migrations.sql" -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $SqlPassword
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
@@ -91,10 +89,10 @@ if (!$testSecret) {
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
 
 if ($EnableFrontdoor) {
-    $content = Get-Content .\$DeployCode\Deployment\external-ingress-with-fd.yaml
+    $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
 }
 else {
-    $content = Get-Content .\$DeployCode\Deployment\external-ingress.yaml    
+    $content = Get-Content .\Deployment\external-ingress.yaml    
 }
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
@@ -137,7 +135,7 @@ if ($QueueType -eq "Storage") {
 }
 
 # Step 6: Deploy customer service app.
-$content = Get-Content .\$DeployCode\Deployment\customerservice.yaml
+$content = Get-Content .\Deployment\customerservice.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$NAMESPACE', $namespace)
@@ -155,7 +153,7 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 7: Deploy Alternate Id service.
-$content = Get-Content .\$DeployCode\Deployment\alternateid.yaml
+$content = Get-Content .\Deployment\alternateid.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
 
@@ -163,7 +161,7 @@ Set-Content -Path ".\alternateid.yaml" -Value $content
 kubectl apply -f ".\alternateid.yaml" --namespace $namespace
 
 # Step 8: Deploy Partner api.
-$content = Get-Content .\$DeployCode\Deployment\partnerapi.yaml
+$content = Get-Content .\Deployment\partnerapi.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$SENDERQUEUECONNECTIONSTRING', $SenderQueueConnectionString)

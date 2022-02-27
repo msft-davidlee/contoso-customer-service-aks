@@ -49,16 +49,8 @@ jobs:
     needs: setup
     environment: ${{ needs.setup.outputs.build_env }}
     runs-on: windows-latest
-    env:
-      RESOURCE_GROUP_NAME: ${{ secrets.RESOURCE_GROUP }}-${{ needs.setup.outputs.build_env }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          path: main
-      - uses: actions/checkout@v2
-        with:
-          repository: msft-davidlee/contoso-customer-service-app
-          path: appcode
 
       - name: Azure CLI Login
         uses: azure/login@v1
@@ -95,29 +87,26 @@ jobs:
 
       - id: resolve-network
         name: Resolve network
-        working-directory: .\main\deployment
+        working-directory: .\deployment
         run: |
-          .\ResolveNetwork.ps1 -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }} -BUILD_ENV ${{ needs.setup.outputs.build_env }}
+          .\ResolveNetwork.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }}
 
       - name: Build azure environment
         id: deploy
         uses: azure/arm-deploy@v1
         with:
           deploymentName: 'aksdeploy${{ steps.resolve-inputs.outputs.deploymentname }}'
-          resourceGroupName: ${{ env.RESOURCE_GROUP_NAME }}
-          template: ./main/deployment/deploy.bicep
-          parameters: location=${{ steps.resolve-network.outputs.location }} prefix=${{ steps.resolve-inputs.outputs.prefix }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} sqlPassword=${{ secrets.SQLPASSWORD }} subnetId=${{ steps.resolve-network.outputs.subnetId }} aksMSIId=${{ secrets.AKS_MSI_ID }} queueType=${{ steps.resolve-inputs.outputs.queuetype }}
+          resourceGroupName: ${{ secrets.RESOURCE_GROUP}}
+          template: ./deployment/deploy.bicep
+          parameters: version=${{ github.run_number }} location=${{ steps.resolve-network.outputs.location }} prefix=${{ steps.resolve-inputs.outputs.prefix }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} sqlPassword=${{ secrets.SQLPASSWORD }} subnetId=${{ steps.resolve-network.outputs.subnetId }} aksMSIId=${{ secrets.AKS_MSI_ID }} queueType=${{ steps.resolve-inputs.outputs.queuetype }}
 
       - id: appsdeploy
         name: Deploy apps
         run: |
-          .\main\Deployment\Deploy.ps1 `
-          -AKS_RESOURCE_GROUP ${{ env.RESOURCE_GROUP_NAME }} `
+          .\Deployment\Deploy.ps1 `
+          -AKS_RESOURCE_GROUP ${{ secrets.RESOURCE_GROUP }} `
           -AKS_NAME ${{ steps.deploy.outputs.aksName }} `
-          -NETWORKING_PREFIX ${{ secrets.NETWORKING_PREFIX }} `
           -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
-          -AppCode appcode `
-          -DeployCode main `
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
@@ -138,5 +127,24 @@ jobs:
         with:
           deploymentName: 'aksdeployfd${{ steps.resolve-inputs.outputs.deploymentname }}'
           resourceGroupName: ${{ env.RESOURCE_GROUP_NAME }}
-          template: ./main/deployment/frontdoor.bicep
-          parameters: stackName=${{ steps.deploy.outputs.stackname }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} serviceIP=${{ steps.appsdeploy.outputs.serviceip }} 
+          template: ./deployment/frontdoor.bicep
+          parameters: stackName=${{ steps.deploy.outputs.stackname }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} serviceIP=${{ steps.appsdeploy.outputs.serviceip }}
+
+  cleanup:
+    name: Clean up
+    if: needs.setup.outputs.build_env == 'prod'
+    needs: setup    
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          enable-AzPSSession: true
+
+      - id: removedevresources
+        name: Remove Dev Resources
+        run: |
+          .\Deployment\RemoveDevResources.ps1
