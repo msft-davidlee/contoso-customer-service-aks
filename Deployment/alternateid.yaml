@@ -25,7 +25,7 @@ spec:
           secretName: dotfile-secret
       containers:
       - name: alternateid
-        image: $ACRNAME.azurecr.io/contoso-demo-alternate-id-service:v1
+        image: $ACRNAME.azurecr.io/contoso-demo-alternate-id-service:$VERSION
         resources:
           requests:
             cpu: 100m
@@ -44,6 +44,16 @@ spec:
           value: FilePath=/etc/secret-volume/.secret-file
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
+        - name: AzureAd__Instance
+          value: $AADINSTANCE
+        - name: AzureAd__TenantId
+          value: $AADTENANTID
+        - name: AzureAd__Domain
+          value: $AADDOMAIN
+        - name: AzureAd__ClientId
+          value: $AADCLIENTID
+        - name: AzureAd__Audience
+          value: $AADAUDIENCE         
 ---
 apiVersion: v1
 kind: Service

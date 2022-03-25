@@ -5,28 +5,28 @@ The information contained in this README.md file and any accompanying materials 
 This project implements the Contoso Customer Service Rewards Lookup & Consumption Application with Azure Kubernetes Service (AKS). For more information about this workload, checkout: https://github.com/msft-davidlee/contoso-customer-service-app#readme. 
 
 # Get Started
-To create this, you will need to follow build the application. Follow the guidance on https://github.com/msft-davidlee/contoso-customer-service-app. Next, use your Azure subscription and also a AAD instance that you control and follow the steps below.
+To create this, you will need to follow the steps below.
 
 1. Fork this git repo. See: https://docs.github.com/en/get-started/quickstart/fork-a-repo
-2. Create two resource groups to represent two environments. Suffix each resource group name with either a -dev or -prod. An example could be todo-dev and todo-prod.
-3. Next, you must create a service principal with Contributor roles assigned to the two resource groups.
-4. In your github organization for your project, create two environments, and named them dev and prod respectively.
-5. Create the following secrets in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
-6. Note that the environment suffix of dev or prod will be appened to your resource group but you will have the option to define your own resource prefix.
-7. Create App Registration include the appropriate Urls. See Secrets below.
+2. Follow the steps in https://github.com/msft-davidlee/contoso-governance to create the necessary resources via Azure Blueprint.
+3. Create the following secret(s) in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
+
+## Deploying Frontdoor
+If you are deploying Frontdoor. Frontdoor by already has its domain name with SSL cert and that's what we will be using. 
+
+After that, in the App Configuration, you will need to configure the follow to enable Frontdoor.
+
+| Name | Comments |
+| --- | --- |
+| Key | contoso-customer-service-app-service/deployment-flags/enable-frontdoor |
+| Label | dev or prod |
+| Value | true or false |
 
 ## Secrets
 | Name | Comments |
 | --- | --- |
 | MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
 | PREFIX | mytodos - or whatever name you would like for all your resources |
-| RESOURCE_GROUP | todo - or whatever name you give to the resource group |
-| AAD_CLIENT_ID | Client Id |
-| AAD_CLIENT_SECRET | Client Secret |
-| AAD_DOMAIN | replace "something." with the correct domain something.onmicrosoft.com  |
-| AAD_TENANT_ID | Tenant Id |
-| SQLPASSWORD | SQL password that you want to use |
-| NETWORKING_PREFIX | Network stack-name tag with the specific value |
 
 8. Create certificate for your solution using the following ``` openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls" ```
 9. Next, upload the outputs to a container named certs in your storage account.

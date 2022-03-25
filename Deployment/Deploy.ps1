@@ -5,44 +5,62 @@ param(
     [string]$DbName,
     [string]$SqlServer,
     [string]$SqlUsername,
-    [string]$SqlPassword,
     [string]$Backend,
-    [string]$AAD_INSTANCE,
-    [string]$AAD_DOMAIN,
-    [string]$AAD_TENANT_ID,
-    [string]$AAD_CLIENT_ID,
-    [string]$AAD_CLIENT_SECRET,
     [string]$QueueType,
     [bool]$EnableFrontdoor)
 
+function GetResource([string]$stackName, [string]$stackEnvironment) {
+    $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
+    if (!$platformRes) {
+        throw "Unable to find eligible $stackName resource!"
+    }
+    if ($platformRes.Length -eq 0) {
+        throw "Unable to find 'ANY' eligible $stackName resource!"
+    }
+        
+    $res = ($platformRes | Where-Object { $_.tags.'stack-environment' -eq $stackEnvironment })
+    if (!$res) {
+        throw "Unable to find resource by environment!"
+    }
+        
+    return $res
+}
 $ErrorActionPreference = "Stop"
 
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
-$platformRes = (az resource list --tag stack-name=platform | ConvertFrom-Json)
-if (!$platformRes) {
-    throw "Unable to find eligible platform resources!"
-}
-if ($platformRes.Length -eq 0) {
-    throw "Unable to find 'ANY' eligible platform resources!"
-}
 
-$acr = ($platformRes | Where-Object { $_.type -eq "Microsoft.ContainerRegistry/registries" -and $_.tags.'stack-environment' -eq 'prod' })
-if (!$acr) {
-    throw "Unable to find eligible platform container registry!"
-}
+$kv = GetResource -stackName shared-key-vault -stackEnvironment prod
+$kvName = $kv.name
+$sqlPassword = (az keyvault secret show -n contoso-customer-service-sql-password --vault-name $kvName --query value | ConvertFrom-Json)
+
+$AAD_INSTANCE = (az keyvault secret show -n contoso-customer-service-aad-instance --vault-name $kvName --query value | ConvertFrom-Json)
+$AAD_DOMAIN = (az keyvault secret show -n contoso-customer-service-aad-domain --vault-name $kvName --query value | ConvertFrom-Json)
+$AAD_TENANT_ID = (az keyvault secret show -n contoso-customer-service-aad-tenant-id --vault-name $kvName --query value | ConvertFrom-Json)
+$AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-client-id --vault-name $kvName --query value | ConvertFrom-Json)
+$AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-client-secret --vault-name $kvName --query value | ConvertFrom-Json)
+$AAD_AUDIENCE = (az keyvault secret show -n contoso-customer-service-aad-app-audience --vault-name $kvName --query value | ConvertFrom-Json)
+
+$acr = GetResource -stackName shared-container-registry -stackEnvironment prod
 $acrName = $acr.Name
 
-$strs = ($platformRes | Where-Object { $_.type -eq "Microsoft.Storage/storageAccounts" -and $_.tags.'stack-environment' -eq 'prod' })
-if (!$strs) {
-    throw "Unable to find eligible platform storage account!"
-}
+$strs = GetResource -stackName shared-storage -stackEnvironment prod
 $BuildAccountName = $strs.name
 
+# The version here can be configurable so we can also pull dev specific packages.
+$version = "v4.4"
+
+az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern *$version*.zip
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to download files."
+}
+
 # Step 1: Deploy DB.
-az storage blob download --file "Migrations.sql" --container-name apps --name "Migrations.sql" --account-name $BuildAccountName
-Invoke-Sqlcmd -InputFile "Migrations.sql" -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $SqlPassword
+# Deploy specfic version of SQL script
+$sqlFile = "Migrations-$version.sql"
+az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern $sqlFile
+Invoke-Sqlcmd -InputFile $sqlFile -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $sqlPassword
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
@@ -146,6 +164,8 @@ $content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
 $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
 
+$content = $content.Replace('$VERSION', $version)
+
 Set-Content -Path ".\customerservice.yaml" -Value $content
 kubectl apply -f ".\customerservice.yaml" --namespace $namespace
 if ($LastExitCode -ne 0) {
@@ -157,6 +177,14 @@ $content = Get-Content .\Deployment\alternateid.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
 
+$content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
+$content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
+$content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
+$content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
+$content = $content.Replace('$AADAUDIENCE', $AAD_AUDIENCE)
+
+$content = $content.Replace('$VERSION', $version)
+
 Set-Content -Path ".\alternateid.yaml" -Value $content
 kubectl apply -f ".\alternateid.yaml" --namespace $namespace
 
@@ -167,16 +195,35 @@ $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$SENDERQUEUECONNECTIONSTRING', $SenderQueueConnectionString)
 $content = $content.Replace('$SHIPPINGREPOSITORYTYPE', $QueueType)
 
+$content = $content.Replace('$VERSION', $version)
+
 Set-Content -Path ".\partnerapi.yaml" -Value $content
 kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
 
+# Step 10: Deploy Member service.
+$content = Get-Content .\Deployment\memberservice.yaml
+$content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
+$content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$NAMESPACE', $namespace)
+
+$content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
+$content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
+$content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
+$content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
+$content = $content.Replace('$AADAUDIENCE', $AAD_AUDIENCE)
+
+$content = $content.Replace('$VERSION', $version)
+
+Set-Content -Path ".\memberservice.yaml" -Value $content
+kubectl apply -f ".\memberservice.yaml" --namespace $namespace
+
 # Step 9: Deploy backend
 if ($QueueType -eq "ServiceBus") { 
-    $backendZip = "contoso-demo-service-bus-shipping-func-v1.zip"
+    $backendZip = "contoso-demo-service-bus-shipping-func-$version.zip"
 }
 
 if ($QueueType -eq "Storage") {
-    $backendZip = "contoso-demo-storage-queue-func-v1.zip"
+    $backendZip = "contoso-demo-storage-queue-func-$version.zip"
 }
 
 az storage blob download --file $backendZip --container-name apps --name $backendZip --account-name $BuildAccountName

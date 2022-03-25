@@ -8,24 +8,24 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: customerservice
+  name: memberservice
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: customerservice
+      app: memberservice
   template:
     metadata:
       labels:
-        app: customerservice
+        app: memberservice
     spec:
       volumes:
       - name: secret-volume
         secret:
           secretName: dotfile-secret
       containers:
-      - name: customerservice
-        image: $ACRNAME.azurecr.io/contoso-demo-website:%VERSION%
+      - name: memberservice
+        image: $ACRNAME.azurecr.io/contoso-demo-member-service:$VERSION
         resources:
           requests:
             cpu: 100m
@@ -43,15 +43,9 @@ spec:
         - name: DbConnectionString
           value: FilePath=/etc/secret-volume/.secret-file
         - name: AlternateIdServiceUri
-          value: http://alternateid.$NAMESPACE.svc.cluster.local
-        - name: PartnerAPIUri
-          value: http://partnerapi.$NAMESPACE.svc.cluster.local
+          value: http://alternateid.$NAMESPACE.svc.cluster.local          
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
-        - name: EnableAuth
-          value: "true"
-        - name: AzureAd__CallbackPath
-          value: /signin-oidc
         - name: AzureAd__Instance
           value: $AADINSTANCE
         - name: AzureAd__TenantId
@@ -60,18 +54,16 @@ spec:
           value: $AADDOMAIN
         - name: AzureAd__ClientId
           value: $AADCLIENTID
-        - name: AzureAd__ClientSecret
-          value: $AADCLIENTSECRET
-        - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
-          value: "true"
+        - name: AzureAd__Audience
+          value: $AADAUDIENCE              
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: customerservice
+  name: memberservice
 spec:
   type: ClusterIP
   ports:
   - port: 80
   selector:
-    app: customerservice
+    app: memberservice
