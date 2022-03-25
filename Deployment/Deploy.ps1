@@ -1,13 +1,13 @@
 param(
-    [string]$AKS_RESOURCE_GROUP,    
-    [string]$AKS_NAME,    
-    [string]$BUILD_ENV,
-    [string]$DbName,
-    [string]$SqlServer,
-    [string]$SqlUsername,
-    [string]$Backend,
-    [string]$QueueType,
-    [bool]$EnableFrontdoor)
+    [Parameter(Mandatory = $true)][string]$AKS_RESOURCE_GROUP,    
+    [Parameter(Mandatory = $true)][string]$AKS_NAME,    
+    [Parameter(Mandatory = $true)][string]$BUILD_ENV,
+    [Parameter(Mandatory = $true)][string]$DbName,
+    [Parameter(Mandatory = $true)][string]$SqlServer,
+    [Parameter(Mandatory = $true)][string]$SqlUsername,
+    [Parameter(Mandatory = $true)][string]$Backend,
+    [Parameter(Mandatory = $true)][string]$QueueType,
+    [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -142,11 +142,20 @@ $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UT
 if ($QueueType -eq "ServiceBus") { 
     $SenderQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
         --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json    
+    
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable get service bus connection string."
+    }
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
 }
 
 if ($QueueType -eq "Storage") {
     $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $AKS_NAME | ConvertFrom-Json)[0].value
+
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable get storage account key."
+    }
+
     $connStr = "DefaultEndpointsProtocol=https;AccountName=$AKS_NAME;AccountKey=$key1;EndpointSuffix=core.windows.net"
     $connStr = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
     $SenderQueueConnectionString = $connStr;
