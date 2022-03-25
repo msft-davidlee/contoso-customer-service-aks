@@ -18,7 +18,8 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
     return $res
 }
 
-$vnet = GetResource -stackName networking -stackEnvironment $BUILD_ENV
+$allResources = GetResource -stackName networking -stackEnvironment $BUILD_ENV
+$vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }
 $vnetRg = $vnet.resourceGroup
 $vnetName = $vnet.name
 $location = $vnet.location
