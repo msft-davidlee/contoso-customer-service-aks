@@ -70,8 +70,7 @@ jobs:
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}
             subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
-            aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
-            enableFrontdoor=${{ steps.resolve-shared-resources.outputs.enableFrontdoor }}
+            aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}            
 
       - id: appsdeploy
         name: Deploy apps

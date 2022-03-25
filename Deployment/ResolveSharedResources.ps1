@@ -57,7 +57,7 @@ Write-Host "::set-output name=managedIdentityId::$mid"
 
 $config = GetResource -stackName shared-configuration -stackEnvironment prod
 $configName = $config.name
-$enableFrontdoor = (az appconfig kv show -n $configName --key "contoso-customer-service-app-service/deployment-flags/enable-frontdoor" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$enableFrontdoor = (az appconfig kv show -n $configName --key "contoso-customer-service-aks/deployment-flags/enable-frontdoor" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-frontdoor flag from $configName."
 }
