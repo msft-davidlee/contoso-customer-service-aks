@@ -44,6 +44,8 @@ spec:
           value: FilePath=/etc/secret-volume/.secret-file
         - name: AlternateIdServiceUri
           value: http://alternateid.$NAMESPACE.svc.cluster.local
+        - name: MemberServiceUri
+          value: http://memberservice.$NAMESPACE.svc.cluster.local          
         - name: PartnerAPIUri
           value: http://partnerapi.$NAMESPACE.svc.cluster.local
         - name: ASPNETCORE_ENVIRONMENT
@@ -62,6 +64,8 @@ spec:
           value: $AADCLIENTID
         - name: AzureAd__ClientSecret
           value: $AADCLIENTSECRET
+        - name: AzureAd__Scopes
+          value: $AADSCOPES         
         - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
           value: "true"
 ---

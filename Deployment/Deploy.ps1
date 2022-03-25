@@ -41,7 +41,7 @@ $AAD_TENANT_ID = (az keyvault secret show -n contoso-customer-service-aad-tenant
 $AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-client-id --vault-name $kvName --query value | ConvertFrom-Json)
 $AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-client-secret --vault-name $kvName --query value | ConvertFrom-Json)
 $AAD_AUDIENCE = (az keyvault secret show -n contoso-customer-service-aad-app-audience --vault-name $kvName --query value | ConvertFrom-Json)
-
+$AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --vault-name $kvName --query value | ConvertFrom-Json)
 $acr = GetResource -stackName shared-container-registry -stackEnvironment prod
 $acrName = $acr.Name
 
@@ -163,6 +163,7 @@ $content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
 $content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
 $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
+$content = $content.Replace('$AADSCOPES', $AAD_SCOPES)
 
 $content = $content.Replace('$VERSION', $version)
 
