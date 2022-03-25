@@ -9,6 +9,7 @@ param subnetId string
 param aksMSIId string
 param queueType string
 param version string
+param lastUpdated string = utcNow('u')
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -16,6 +17,8 @@ var tags = {
   'stack-environment': appEnvironment
   'stack-branch': branch
   'stack-version': version
+  'stack-last-updated': lastUpdated
+  'stack-sub-name': 'demo'
 }
 
 resource appinsights 'Microsoft.Insights/components@2020-02-02' = {
