@@ -201,6 +201,10 @@ $content = $content.Replace('$VERSION', $version)
 Set-Content -Path ".\alternateid.yaml" -Value $content
 kubectl apply -f ".\alternateid.yaml" --namespace $namespace
 
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy alternate id app."
+}
+
 # Step: 7b: Configure Azure Key Vault
 $content = Get-Content .\Deployment\azurekeyvault.yaml
 $content = $content.Replace('$MANAGEDID', $AKSMSIId)
@@ -209,6 +213,10 @@ $content = $content.Replace('$TENANTID', $TenantId)
 
 Set-Content -Path ".\azurekeyvault.yaml" -Value $content
 kubectl apply -f ".\azurekeyvault.yaml" --namespace $namespace
+
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy azure key vault app."
+}
 
 # Step 8: Deploy Partner api.
 $content = Get-Content .\Deployment\partnerapi.yaml
