@@ -7,6 +7,9 @@ param(
     [Parameter(Mandatory = $true)][string]$SqlUsername,
     [Parameter(Mandatory = $true)][string]$Backend,
     [Parameter(Mandatory = $true)][string]$QueueType,
+    [Parameter(Mandatory = $true)][string]$AKSMSIId,
+    [Parameter(Mandatory = $true)][string]$KeyVaultName,
+    [Parameter(Mandatory = $true)][string]$TenantId,
     [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
@@ -198,11 +201,22 @@ $content = $content.Replace('$VERSION', $version)
 Set-Content -Path ".\alternateid.yaml" -Value $content
 kubectl apply -f ".\alternateid.yaml" --namespace $namespace
 
+# Step: 7b: Configure Azure Key Vault
+$content = Get-Content .\Deployment\azurekeyvault.yaml
+$content = $content.Replace('$MANAGEDID', $AKSMSIId)
+$content = $content.Replace('$KEYVAULTNAME', $KeyVaultName)
+$content = $content.Replace('$TENANTID', $TenantId)
+
+Set-Content -Path ".\azurekeyvault.yaml" -Value $content
+kubectl apply -f ".\azurekeyvault.yaml" --namespace $namespace
+
 # Step 8: Deploy Partner api.
 $content = Get-Content .\Deployment\partnerapi.yaml
-$content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
+$content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
-$content = $content.Replace('$SENDERQUEUECONNECTIONSTRING', $SenderQueueConnectionString)
+$content = $content.Replace('$DBSOURCE', $SqlServer)
+$content = $content.Replace('$DBNAME', $DbName)
+$content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$SHIPPINGREPOSITORYTYPE', $QueueType)
 
 $content = $content.Replace('$VERSION', $version)

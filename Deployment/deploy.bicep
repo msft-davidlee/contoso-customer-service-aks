@@ -188,6 +188,7 @@ output aksName string = aks.name
 output sqlserver string = sql.outputs.sqlFqdn
 output sqlusername string = sqlUsername
 output dbname string = sql.outputs.dbName
+output tenantId string = subscription().tenantId
 
 var backendapp = '${stackName}backendapp'
 resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {

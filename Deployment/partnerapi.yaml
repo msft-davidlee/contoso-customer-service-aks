@@ -3,8 +3,7 @@ kind: Secret
 metadata:
   name: dotfile-secret
 data:
-  .secret-file: "$BASE64CONNECTIONSTRING"
-  .sender-queue-connection-file: "$SENDERQUEUECONNECTIONSTRING"
+  .secret-file: "$SENDERQUEUECONNECTIONSTRING"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -24,6 +23,12 @@ spec:
       - name: secret-volume
         secret:
           secretName: dotfile-secret
+      - name: secrets-store01-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "azure-kvname-podid"        
       containers:
       - name: partnerapi
         image: $ACRNAME.azurecr.io/contoso-demo-partner-api:$VERSION
@@ -40,13 +45,25 @@ spec:
             - name: secret-volume
               readOnly: true
               mountPath: "/etc/secret-volume"
+            - name: secrets-store01-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
         env:
-        - name: DbConnectionString
-          value: FilePath=/etc/secret-volume/.secret-file
+        - name: DbSource
+          value: $DBSOURCE
+        - name: DbName
+          value: $DBNAME
+        - name: DbUserId
+          value: $DBUSERID
+        - name: DbPassword
+          valueFrom:
+            secretKeyRef:
+              name: contoso-customer-service-sql-password
+              key: DbPassword   
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
         - name: QueueConnectionString
-          value: FilePath=/etc/secret-volume/.sender-queue-connection-file
+          value: FilePath=/etc/secret-volume/.secret-file
         - name: QueueName
           value: orders
         - name: ShippingRepositoryType
