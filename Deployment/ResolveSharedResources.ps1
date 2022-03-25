@@ -52,7 +52,7 @@ $keyVaultId = $kv.id
 Write-Host "::set-output name=keyVaultId::$keyVaultId"
 
 # Also resolve managed identity to use
-$mid = (az identity list -g aks | ConvertFrom-Json).id
+$mid = (az identity list -g $appResourceGroup | ConvertFrom-Json).id
 Write-Host "::set-output name=managedIdentityId::$mid"
 
 $config = GetResource -stackName shared-configuration -stackEnvironment prod
