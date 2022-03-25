@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: dotfile-secret
 data:
-  .secret-file: "$SENDERQUEUECONNECTIONSTRING"
+  .secret-file: "$BASE64CONNECTIONSTRING"
 ---
 apiVersion: apps/v1
 kind: Deployment
