@@ -114,7 +114,7 @@ resource kv 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
 }
 
 module sql './sql.bicep' = {
-  name: 'deploySQL'
+  name: 'deploy-${appEnvironment}-${version}-sql'
   params: {
     stackName: stackName
     sqlPassword: kv.getSecret('contoso-customer-service-sql-password')
