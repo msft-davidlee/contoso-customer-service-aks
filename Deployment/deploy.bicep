@@ -177,6 +177,9 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
           logAnalyticsWorkspaceResourceID: wks.id
         }
       }
+      azureKeyvaultSecretsProvider: {
+        enabled: true
+      }
     }
   }
 }
