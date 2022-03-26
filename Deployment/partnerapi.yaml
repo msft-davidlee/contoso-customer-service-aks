@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: dotfile-secret
 data:
-  .secret-file: "$BASE64CONNECTIONSTRING"
+  .secret-conn-file: "$BASE64CONNECTIONSTRING"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -63,7 +63,7 @@ spec:
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
         - name: QueueConnectionString
-          value: FilePath=/etc/secret-volume/.secret-file
+          value: FilePath=/etc/secret-volume/.secret-conn-file
         - name: QueueName
           value: orders
         - name: ShippingRepositoryType
