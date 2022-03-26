@@ -232,6 +232,10 @@ $content = $content.Replace('$VERSION', $version)
 Set-Content -Path ".\partnerapi.yaml" -Value $content
 kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
 
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy partner api app."
+}
+
 # Step 10: Deploy Member service.
 $content = Get-Content .\Deployment\memberservice.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
@@ -248,6 +252,10 @@ $content = $content.Replace('$VERSION', $version)
 
 Set-Content -Path ".\memberservice.yaml" -Value $content
 kubectl apply -f ".\memberservice.yaml" --namespace $namespace
+
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy member service app."
+}
 
 # Step 9: Deploy backend
 if ($QueueType -eq "ServiceBus") { 
