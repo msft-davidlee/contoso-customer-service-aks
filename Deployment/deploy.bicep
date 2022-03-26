@@ -189,6 +189,7 @@ output sqlserver string = sql.outputs.sqlFqdn
 output sqlusername string = sqlUsername
 output dbname string = sql.outputs.dbName
 output tenantId string = subscription().tenantId
+output managedIdentityId string = aks.properties.addonProfiles.azureKeyvaultSecretsProvider.identity.clientId
 
 var backendapp = '${stackName}backendapp'
 resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {

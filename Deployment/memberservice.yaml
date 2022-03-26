@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: dotfile-secret
+  name: memberservice-dotfile-secret
 data:
   .secret-file: "$BASE64CONNECTIONSTRING"
 ---
@@ -22,7 +22,7 @@ spec:
       volumes:
       - name: secret-volume
         secret:
-          secretName: dotfile-secret
+          secretName: memberservice-dotfile-secret
       containers:
       - name: memberservice
         image: $ACRNAME.azurecr.io/contoso-demo-member-service:$VERSION
