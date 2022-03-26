@@ -1,17 +1,20 @@
 param stackName string
 param appEnvironment string
 param branch string
+param version string
 param serviceIP string
 
 var tags = {
-  'stack-name': stackName
-  'environment': appEnvironment
-  'branch': branch
-  'team': 'platform'
+  'stack-name': 'contoso-customer-service-aks'
+  'stack-environment': appEnvironment
+  'stack-version': version
+  'stack-branch': branch
 }
 
 var frontendEndpointName = '${stackName}-azurefd-net'
-var backendPoolName = 'demowebsite'
+var backendPoolName = 'customer-service-backend-pool'
+var frontdoorFqdn = '${stackName}.azurefd.net'
+
 resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
   name: stackName
   location: 'global'
@@ -42,14 +45,14 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
       {
         name: frontendEndpointName
         properties: {
-          hostName: '${stackName}.azurefd.net'
+          hostName: frontdoorFqdn
         }
       }
     ]
     backendPools: [
       {
         name: backendPoolName
-        properties: {        
+        properties: {
           backends: [
             {
               address: serviceIP
@@ -57,7 +60,7 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
               httpsPort: 443
               priority: 1
               weight: 50
-              backendHostHeader: '${stackName}.azurefd.net'           
+              backendHostHeader: frontdoorFqdn
             }
           ]
           loadBalancingSettings: {
@@ -71,7 +74,7 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
     ]
     routingRules: [
       {
-        name: 'rr'
+        name: 'contoso-customer-app-routing'
         properties: {
           frontendEndpoints: [
             {

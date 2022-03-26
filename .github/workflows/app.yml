@@ -1,24 +1,12 @@
 on:
   push:
+    paths-ignore:
+      - "README.md"
   workflow_dispatch:
     inputs:
       environmentselector:
-        description: 'Environment selector'
+        description: "Environment selector"
         required: false
-      prefix:
-        description: Prefix
-        required: false
-      queuetype:
-        description: 'Queue Type'
-        required: true
-        type: choice
-        options:
-        - ServiceBus
-        - Storage        
-      enablefrontdoor:
-        description: 'Enable frontdoor'
-        required: true
-        type: boolean
 
 jobs:
   setup:
@@ -58,82 +46,67 @@ jobs:
           creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
           enable-AzPSSession: true
 
-      - id: resolve-inputs
-        name: Resolve inputs        
-        run: |
-          $prefix = "${{ github.event.inputs.prefix }}"
-          if ($prefix -eq '') {            
-              Write-Host "Using secret for prefix"
-              $prefix = "${{ secrets.PREFIX }}"
-              if ($prefix -eq '') {
-                  throw "secrets.PREFIX is not configured!"
-              }
-          }
-          else {
-              Write-Host "Using input for prefix"            
-          }          
-          echo "::set-output name=prefix::$prefix"
-          $queuetype = "${{ github.event.inputs.queuetype }}"
-          if ($queuetype -eq '') {            
-              Write-Host "Using default for queuetype"
-              $queuetype = "Storage"
-          }
-          else {
-              Write-Host "Using input for queuetype"            
-          }          
-          echo "::set-output name=queuetype::$queuetype"
-          $deploymentName = Get-Date -Format "yyyyMMddhhmmss"
-          echo "::set-output name=deploymentname::$deploymentName"
-
-      - id: resolve-network
-        name: Resolve network
+      - id: resolve-shared-resources
+        name: Resolve shared resources
         working-directory: .\deployment
         run: |
-          .\ResolveNetwork.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }}
+          .\ResolveSharedResources.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }}
 
       - name: Build azure environment
         id: deploy
         uses: azure/arm-deploy@v1
         with:
-          deploymentName: 'aksdeploy${{ steps.resolve-inputs.outputs.deploymentname }}'
-          resourceGroupName: ${{ secrets.RESOURCE_GROUP}}
+          deploymentName: "deploy-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}"
+          resourceGroupName: ${{ steps.resolve-shared-resources.outputs.appResourceGroup }}
           template: ./deployment/deploy.bicep
-          parameters: version=${{ github.run_number }} location=${{ steps.resolve-network.outputs.location }} prefix=${{ steps.resolve-inputs.outputs.prefix }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} sqlPassword=${{ secrets.SQLPASSWORD }} subnetId=${{ steps.resolve-network.outputs.subnetId }} aksMSIId=${{ secrets.AKS_MSI_ID }} queueType=${{ steps.resolve-inputs.outputs.queuetype }}
+          parameters: >
+            version=${{ github.run_number }}
+            location=${{ steps.resolve-shared-resources.outputs.location }}
+            keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
+            queueType=${{ steps.resolve-shared-resources.outputs.queueType }}
+            prefix=${{ secrets.PREFIX }}
+            appEnvironment=${{ needs.setup.outputs.build_env }}
+            branch=${{ github.ref }}
+            keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
+            sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}
+            subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
+            aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}            
 
       - id: appsdeploy
         name: Deploy apps
         run: |
           .\Deployment\Deploy.ps1 `
-          -AKS_RESOURCE_GROUP ${{ secrets.RESOURCE_GROUP }} `
+          -AKS_RESOURCE_GROUP ${{ steps.resolve-shared-resources.outputs.appResourceGroup }} `
           -AKS_NAME ${{ steps.deploy.outputs.aksName }} `
           -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
           -DbName ${{ steps.deploy.outputs.dbname }} `
           -SqlServer ${{ steps.deploy.outputs.sqlserver }} `
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
-          -SqlPassword ${{ secrets.SQLPASSWORD }} `
           -Backend ${{ steps.deploy.outputs.backend }} `
-          -AAD_INSTANCE ${{ steps.deploy.outputs.aadinstance }} `
-          -AAD_TENANT_ID ${{ secrets.AAD_TENANT_ID }} `
-          -AAD_DOMAIN ${{ secrets.AAD_DOMAIN }} `
-          -AAD_CLIENT_ID ${{ secrets.AAD_CLIENT_ID }} `
-          -AAD_CLIENT_SECRET ${{ secrets.AAD_CLIENT_SECRET }} `
-          -QueueType ${{ steps.resolve-inputs.outputs.queuetype }} `
-          -EnableFrontdoor $${{ github.event.inputs.enablefrontdoor == 'true' }}
+          -QueueType ${{ steps.resolve-shared-resources.outputs.queueType }} `
+          -AKSMSIId ${{ steps.deploy.outputs.managedIdentityId }} `
+          -KeyVaultName ${{ steps.resolve-shared-resources.outputs.keyVaultName }} `
+          -TenantId ${{ steps.deploy.outputs.tenantId }} `
+          -EnableFrontdoor $${{ steps.resolve-shared-resources.outputs.enableFrontdoor == 'true' }}
 
       - name: Build frontdoor
         id: deployfrontdoor
-        if: ${{ github.event.inputs.enablefrontdoor == 'true' }}
+        if: ${{ steps.resolve-shared-resources.outputs.enableFrontdoor == 'true' }}
         uses: azure/arm-deploy@v1
         with:
-          deploymentName: 'aksdeployfd${{ steps.resolve-inputs.outputs.deploymentname }}'
+          deploymentName: "deployfd-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}"
           resourceGroupName: ${{ env.RESOURCE_GROUP_NAME }}
           template: ./deployment/frontdoor.bicep
-          parameters: stackName=${{ steps.deploy.outputs.stackname }} appEnvironment=${{ needs.setup.outputs.build_env }} branch=${{ github.ref }} serviceIP=${{ steps.appsdeploy.outputs.serviceip }}
+          parameters: >
+            stackName=${{ steps.deploy.outputs.stackname }}
+            appEnvironment=${{ needs.setup.outputs.build_env }} 
+            branch=${{ github.ref }}
+            serviceIP=${{ steps.appsdeploy.outputs.serviceip }}
 
   cleanup:
     name: Clean up
     if: needs.setup.outputs.build_env == 'prod'
-    needs: setup    
+    needs: setup
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2

@@ -5,36 +5,50 @@ The information contained in this README.md file and any accompanying materials 
 This project implements the Contoso Customer Service Rewards Lookup & Consumption Application with Azure Kubernetes Service (AKS). For more information about this workload, checkout: https://github.com/msft-davidlee/contoso-customer-service-app#readme. 
 
 # Get Started
-To create this, you will need to follow build the application. Follow the guidance on https://github.com/msft-davidlee/contoso-customer-service-app. Next, use your Azure subscription and also a AAD instance that you control and follow the steps below.
+To create this, you will need to follow the steps below.
 
 1. Fork this git repo. See: https://docs.github.com/en/get-started/quickstart/fork-a-repo
-2. Create two resource groups to represent two environments. Suffix each resource group name with either a -dev or -prod. An example could be todo-dev and todo-prod.
-3. Next, you must create a service principal with Contributor roles assigned to the two resource groups.
-4. In your github organization for your project, create two environments, and named them dev and prod respectively.
-5. Create the following secrets in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
-6. Note that the environment suffix of dev or prod will be appened to your resource group but you will have the option to define your own resource prefix.
-7. Create App Registration include the appropriate Urls. See Secrets below.
+2. Follow the steps in https://github.com/msft-davidlee/contoso-governance to create the necessary resources via Azure Blueprint.
+3. Create the following secret(s) in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
+
+## Deploying Frontdoor
+If you are deploying Frontdoor. Frontdoor by already has its domain name with SSL cert and that's what we will be using. 
+
+After that, in the App Configuration, you will need to configure the follow to enable Frontdoor.
+
+| Name | Comments |
+| --- | --- |
+| Key | contoso-customer-service-app-service/deployment-flags/enable-frontdoor |
+| Label | dev or prod |
+| Value | true or false |
 
 ## Secrets
 | Name | Comments |
 | --- | --- |
 | MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
 | PREFIX | mytodos - or whatever name you would like for all your resources |
-| RESOURCE_GROUP | todo - or whatever name you give to the resource group |
-| AAD_CLIENT_ID | Client Id |
-| AAD_CLIENT_SECRET | Client Secret |
-| AAD_DOMAIN | replace "something." with the correct domain something.onmicrosoft.com  |
-| AAD_TENANT_ID | Tenant Id |
-| SQLPASSWORD | SQL password that you want to use |
-| NETWORKING_PREFIX | Network stack-name tag with the specific value |
 
 8. Create certificate for your solution using the following ``` openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls" ```
 9. Next, upload the outputs to a container named certs in your storage account.
-10. Login via ``` az login ``` into Azure and then login to AKS with ``` az aks get-credentials -n <AKS_NAME> -g <AKS_GROUP_NAME> ```
-11. There's a manual command you need to execute in order for AKS to connect successfully to ACR. ``` az aks update -n <AKS_NAME> -g aks-dev --attach-acr <ACR_NAME> ```
-12. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n <AKS_NAME> -g <AKS_GROUP_NAME> --acr <ACR_NAME>.azurecr.io ```
-13. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
-14. Update your local host file to point to the public ip.
+10. First you will need to launch CloudShell or Azure CLI on your local machine. Be sure to do ``` az login ``` before executing the script.
+11. Next define the value for the variable ``` $BUILD_ENV=""  ``` which can be either dev or prod.
+12. Now you can run the following script:
+```
+$groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
+$resourceGroupName = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' -and $_.tags.'stack-environment' -eq $BUILD_ENV }).name
+$aks = (az resource list -g $resourceGroupName --resource-type "Microsoft.ContainerService/managedClusters" | ConvertFrom-Json)[0]
+az aks get-credentials -n $aks.name -g $resourceGroupName
+$acr = (az resource list --tag stack-name='shared-container-registry' | ConvertFrom-Json)[0]
+az aks update -n $aks.name -g $resourceGroupName --attach-acr $acr.name
+$acrName = $acr.name
+$aksName = $aks.name
+$aksId = $aks.id
+$objectId = (az aks show -g $resourceGroupName -n $aksName --query addonProfiles.azureKeyvaultSecretsProvider.identity.objectId -o tsv)
+az role assignment create --assignee $objectId --role "Key Vault Secrets User" --scope $aksId
+```
+13. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n $aksName -g $resourceGroupName --acr "$acrName.azurecr.io" ```
+14. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
+15. Update your local host file to point to the public ip.
 
 # Take Note
 1. NSG applied on your AKS Subnet may be impacting access to the site. Be sure to open both ports 80 and 443.

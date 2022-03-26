@@ -2,13 +2,21 @@ param prefix string
 param appEnvironment string
 param branch string
 param location string
-@secure()
-param sqlPassword string
+param sharedResourceGroup string
+param keyVaultName string
 param kubernetesVersion string = '1.23.3'
 param subnetId string
 param aksMSIId string
 param queueType string
 param version string
+param lastUpdated string = utcNow('u')
+
+var identity = {
+  type: 'UserAssigned'
+  userAssignedIdentities: {
+    '${aksMSIId}': {}
+  }
+}
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -16,6 +24,8 @@ var tags = {
   'stack-environment': appEnvironment
   'stack-branch': branch
   'stack-version': version
+  'stack-last-updated': lastUpdated
+  'stack-sub-name': 'demo'
 }
 
 resource appinsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -103,40 +113,20 @@ resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-06-01-preview' = 
 
 var sqlUsername = 'app'
 
-resource sql 'Microsoft.Sql/servers@2021-02-01-preview' = {
-  name: stackName
-  location: location
-  tags: tags
-  properties: {
-    administratorLogin: sqlUsername
-    administratorLoginPassword: sqlPassword
-    version: '12.0'
-    publicNetworkAccess: 'Enabled'
-  }
+//https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/key-vault-parameter?tabs=azure-cli#use-getsecret-function
+
+resource kv 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
+  name: keyVaultName
+  scope: resourceGroup(subscription().subscriptionId, sharedResourceGroup)
 }
 
-var dbName = 'app'
-resource db 'Microsoft.Sql/servers/databases@2021-02-01-preview' = {
-  name: dbName
-  parent: sql
-  location: location
-  tags: tags
-  sku: {
-    name: 'Basic'
-    tier: 'Basic'
-    capacity: 5
-  }
-  properties: {
-    collation: 'SQL_Latin1_General_CP1_CI_AS'
-  }
-}
-
-resource sqlfw 'Microsoft.Sql/servers/firewallRules@2021-02-01-preview' = {
-  parent: sql
-  name: 'AllowAllMicrosoftAzureIps'
-  properties: {
-    endIpAddress: '0.0.0.0'
-    startIpAddress: '0.0.0.0'
+module sql './sql.bicep' = {
+  name: 'deploy-${appEnvironment}-${version}-sql'
+  params: {
+    stackName: stackName
+    sqlPassword: kv.getSecret('contoso-customer-service-sql-password')
+    tags: tags
+    location: location
   }
 }
 
@@ -194,14 +184,19 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
           logAnalyticsWorkspaceResourceID: wks.id
         }
       }
+      azureKeyvaultSecretsProvider: {
+        enabled: true
+      }
     }
   }
 }
 
 output aksName string = aks.name
-output sqlserver string = sql.properties.fullyQualifiedDomainName
+output sqlserver string = sql.outputs.sqlFqdn
 output sqlusername string = sqlUsername
-output dbname string = dbName
+output dbname string = sql.outputs.dbName
+output tenantId string = subscription().tenantId
+output managedIdentityId string = aks.properties.addonProfiles.azureKeyvaultSecretsProvider.identity.clientId
 
 var backendapp = '${stackName}backendapp'
 resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
@@ -229,7 +224,6 @@ resource backendappplan 'Microsoft.Web/serverfarms@2020-10-01' = {
 }
 
 var queueConnectionString = (queueType == 'Storage') ? 'DefaultEndpointsProtocol=https;AccountName=${stackName};AccountKey=${listKeys(str.id, str.apiVersion).keys[0].value};EndpointSuffix=core.windows.net' : '${listKeys(sbuListenAuthRule.id, sbu.apiVersion).primaryConnectionString}'
-var sqlConnectionString = 'Data Source=${sql.properties.fullyQualifiedDomainName};Initial Catalog=${dbName}; User Id=${sqlUsername};Password=${sqlPassword}'
 
 var backendappConnection = 'DefaultEndpointsProtocol=https;AccountName=${backendappStr.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(backendappStr.id, backendappStr.apiVersion).keys[0].value}'
 resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
@@ -237,10 +231,9 @@ resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
   location: location
   tags: tags
   kind: 'functionapp'
-  identity: {
-    type: 'SystemAssigned'
-  }
+  identity: identity
   properties: {
+    keyVaultReferenceIdentity: aksMSIId
     httpsOnly: true
     serverFarmId: backendappplan.id
     clientAffinityEnabled: true
@@ -252,8 +245,20 @@ resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
           'value': appinsights.properties.InstrumentationKey
         }
         {
-          'name': 'DbConnectionString'
-          'value': sqlConnectionString
+          name: 'DbSource'
+          value: sql.outputs.sqlFqdn
+        }
+        {
+          name: 'DbName'
+          value: sql.outputs.dbName
+        }
+        {
+          name: 'DbUserId'
+          value: sqlUsername
+        }
+        {
+          name: 'DbPassword'
+          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=contoso-customer-service-sql-password)'
         }
         {
           'name': 'AzureWebJobsDashboard'
@@ -285,7 +290,7 @@ resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
         }
         {
           'name': 'FUNCTIONS_EXTENSION_VERSION'
-          'value': '~3'
+          'value': '~4'
         }
         {
           'name': 'ApplicationInsightsAgent_EXTENSION_VERSION'
