@@ -11,6 +11,13 @@ param queueType string
 param version string
 param lastUpdated string = utcNow('u')
 
+var identity = {
+  type: 'UserAssigned'
+  userAssignedIdentities: {
+    '${aksMSIId}': {}
+  }
+}
+
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
   'stack-name': 'contoso-customer-service-aks'
@@ -224,10 +231,9 @@ resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
   location: location
   tags: tags
   kind: 'functionapp'
-  identity: {
-    type: 'SystemAssigned'
-  }
+  identity: identity
   properties: {
+    keyVaultReferenceIdentity: aksMSIId
     httpsOnly: true
     serverFarmId: backendappplan.id
     clientAffinityEnabled: true

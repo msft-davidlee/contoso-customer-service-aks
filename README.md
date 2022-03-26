@@ -42,6 +42,9 @@ $acr = (az resource list --tag stack-name='shared-container-registry' | ConvertF
 az aks update -n $aks.name -g $resourceGroupName --attach-acr $acr.name
 $acrName = $acr.name
 $aksName = $aks.name
+$aksId = $aks.id
+$objectId = (az aks show -g $resourceGroupName -n $aksName --query addonProfiles.azureKeyvaultSecretsProvider.identity.objectId -o tsv)
+az role assignment create --assignee $objectId --role "Key Vault Secrets User" --scope $aksId
 ```
 13. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n $aksName -g $resourceGroupName --acr "$acrName.azurecr.io" ```
 14. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
