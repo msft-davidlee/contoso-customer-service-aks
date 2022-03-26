@@ -28,7 +28,7 @@ spec:
           driver: secrets-store.csi.k8s.io
           readOnly: true
           volumeAttributes:
-            secretProviderClass: "azure-kvname-podid"        
+            secretProviderClass: "azure-kvname-podid"
       containers:
       - name: partnerapi
         image: $ACRNAME.azurecr.io/contoso-demo-partner-api:$VERSION
@@ -59,7 +59,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: contoso-customer-service-sql-password
-              key: contoso-customer-service-sql-password   
+              key: contoso-customer-service-sql-password
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
         - name: QueueConnectionString

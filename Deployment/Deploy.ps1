@@ -166,7 +166,9 @@ if ($QueueType -eq "Storage") {
 
 # Step 6: Deploy customer service app.
 $content = Get-Content .\Deployment\customerservice.yaml
-$content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
+$content = $content.Replace('$DBSOURCE', $SqlServer)
+$content = $content.Replace('$DBNAME', $DbName)
+$content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$NAMESPACE', $namespace)
 
@@ -187,7 +189,9 @@ if ($LastExitCode -ne 0) {
 
 # Step 7: Deploy Alternate Id service.
 $content = Get-Content .\Deployment\alternateid.yaml
-$content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
+$content = $content.Replace('$DBSOURCE', $SqlServer)
+$content = $content.Replace('$DBNAME', $DbName)
+$content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
 
 $content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
@@ -238,7 +242,9 @@ if ($LastExitCode -ne 0) {
 
 # Step 10: Deploy Member service.
 $content = Get-Content .\Deployment\memberservice.yaml
-$content = $content.Replace('$BASE64CONNECTIONSTRING', $base64DbConnectionString)
+$content = $content.Replace('$DBSOURCE', $SqlServer)
+$content = $content.Replace('$DBNAME', $DbName)
+$content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$NAMESPACE', $namespace)
 
