@@ -5,6 +5,12 @@ metadata:
   name: azure-kvname-podid
 spec:
   provider: azure
+  secretObjects:
+  - secretName: contoso-customer-service-sql-password # name given to our kubernetes secret
+    type: Opaque
+    data:
+    - objectName: contoso-customer-service-sql-password # must match objectName below
+      key: contoso-customer-service-sql-password # this can be called what you want, this is to reference  
   parameters:
     usePodIdentity: "false"
     useVMManagedIdentity: "true"          # Set to true for using managed identity
