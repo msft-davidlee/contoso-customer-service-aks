@@ -13,7 +13,7 @@ spec:
         app: customerservice
     spec:
       volumes:
-      - name: secrets-store01-inline
+      - name: secrets-store-customerservice
         csi:
           driver: secrets-store.csi.k8s.io
           readOnly: true
@@ -32,7 +32,7 @@ spec:
         ports:
         - containerPort: 80
         volumeMounts:
-            - name: secrets-store01-inline
+            - name: secrets-store-customerservice
               mountPath: "/mnt/secrets-store"
               readOnly: true
         env:
