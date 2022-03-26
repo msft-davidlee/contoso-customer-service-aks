@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: dotfile-secret
+  name: partnerapi-dotfile-secret
 data:
   .secret-conn-file: "$BASE64CONNECTIONSTRING"
 ---
@@ -22,7 +22,7 @@ spec:
       volumes:
       - name: secret-volume
         secret:
-          secretName: dotfile-secret
+          secretName: partnerapi-dotfile-secret
       - name: secrets-store01-inline
         csi:
           driver: secrets-store.csi.k8s.io
