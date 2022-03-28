@@ -10,6 +10,13 @@ To create this, you will need to follow the steps below.
 1. Fork this git repo. See: https://docs.github.com/en/get-started/quickstart/fork-a-repo
 2. Follow the steps in https://github.com/msft-davidlee/contoso-governance to create the necessary resources via Azure Blueprint.
 3. Create the following secret(s) in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
+4. Create certificate for your solution using the following ``` openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls" ```
+5. Next, upload the outputs to a container named certs in your storage account.
+6. Execute the GitHub action workflow. Review the output to ensure the workflow executes with no errors.
+7. Next, you will need to launch CloudShell or Azure CLI on your local machine. If you are using CloudShell, you can clone this repo there and CD into this folder. If you are on your local machine, be sure to do ``` az login ``` before executing the script.
+8. You will need to run the CompleteSetup.ps1 script manually. Be sure to pass in BUILD_ENV parameter which can be either dev or prod.
+9. To check if everything is setup successfully, review the script output for any errors.
+10. Update your local host file to point to the public ip.
 
 ## Deploying Frontdoor
 If you are deploying Frontdoor. Frontdoor by already has its domain name with SSL cert and that's what we will be using. 
@@ -28,29 +35,7 @@ After that, in the App Configuration, you will need to configure the follow to e
 | MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
 | PREFIX | mytodos - or whatever name you would like for all your resources |
 
-8. Create certificate for your solution using the following ``` openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls" ```
-9. Next, upload the outputs to a container named certs in your storage account.
-10. First you will need to launch CloudShell or Azure CLI on your local machine. Be sure to do ``` az login ``` before executing the script.
-11. Next define the value for the variable ``` $BUILD_ENV=""  ``` which can be either dev or prod.
-12. Now you can run the following script:
-```
-$groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
-$resourceGroupName = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' -and $_.tags.'stack-environment' -eq $BUILD_ENV }).name
-$aks = (az resource list -g $resourceGroupName --resource-type "Microsoft.ContainerService/managedClusters" | ConvertFrom-Json)[0]
-az aks get-credentials -n $aks.name -g $resourceGroupName
-$acr = (az resource list --tag stack-name='shared-container-registry' | ConvertFrom-Json)[0]
-az aks update -n $aks.name -g $resourceGroupName --attach-acr $acr.name
-$acrName = $acr.name
-$aksName = $aks.name
-$aksId = $aks.id
-$objectId = (az aks show -g $resourceGroupName -n $aksName --query addonProfiles.azureKeyvaultSecretsProvider.identity.objectId -o tsv)
-az role assignment create --assignee $objectId --role "Key Vault Secrets User" --scope $aksId
-```
-13. To check if everything is setup successfully, run the following command: ``` az aks check-acr -n $aksName -g $resourceGroupName --acr "$acrName.azurecr.io" ```
-14. To verify the public IP of the ingress controller, run the following command: ``` kubectl get services -n myapps ```
-15. Update your local host file to point to the public ip.
-
-# Take Note
+# Troubleshooting
 1. NSG applied on your AKS Subnet may be impacting access to the site. Be sure to open both ports 80 and 443.
 3. You may have notice the following configuration in external-ingress.yaml
 

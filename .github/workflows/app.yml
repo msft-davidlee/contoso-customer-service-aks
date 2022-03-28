@@ -50,7 +50,7 @@ jobs:
         name: Resolve shared resources
         working-directory: .\deployment
         run: |
-          .\ResolveSharedResources.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }}
+          .\ResolveSharedResources.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
 
       - name: Build azure environment
         id: deploy
@@ -69,6 +69,7 @@ jobs:
             branch=${{ github.ref }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}
+            nodesResourceGroup=${{ steps.resolve-shared-resources.outputs.nodesResourceGroup }}
             subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}            
 

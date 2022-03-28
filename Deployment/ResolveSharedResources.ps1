@@ -1,5 +1,6 @@
 param(
-    [string]$BUILD_ENV)
+    [string]$BUILD_ENV,
+    [string]$Prefix)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -47,12 +48,18 @@ $groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
 $appResourceGroup = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' }).name
 Write-Host "::set-output name=appResourceGroup::$appResourceGroup"
 
+# We can provide a name but it cannot be existing
+# https://docs.microsoft.com/en-us/azure/aks/faq#can-i-provide-my-own-name-for-the-aks-node-resource-group
+$nodesResourceGroup = "$appResourceGroup-$Prefix"
+Write-Host "::set-output name=nodesResourceGroup::$nodesResourceGroup"
+
 # https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-tutorial-use-key-vault
 $keyVaultId = $kv.id
 Write-Host "::set-output name=keyVaultId::$keyVaultId"
 
 # Also resolve managed identity to use
-$mid = (az identity list -g $appResourceGroup | ConvertFrom-Json).id
+$identity = az identity list -g $appResourceGroup | ConvertFrom-Json
+$mid = $identity.id
 Write-Host "::set-output name=managedIdentityId::$mid"
 
 $config = GetResource -stackName shared-configuration -stackEnvironment prod
