@@ -50,7 +50,7 @@ jobs:
         name: Resolve shared resources
         working-directory: .\deployment
         run: |
-          .\ResolveSharedResources.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }}
+          .\ResolveSharedResources.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
 
       - name: Build azure environment
         id: deploy
@@ -85,7 +85,7 @@ jobs:
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
           -Backend ${{ steps.deploy.outputs.backend }} `
           -QueueType ${{ steps.resolve-shared-resources.outputs.queueType }} `
-          -AKSMSIId ${{ steps.resolve-shared-resources.outputs.managedIdentityClientId }} `
+          -AKSMSIId ${{ steps.deploy.outputs.managedIdentityId }} `
           -KeyVaultName ${{ steps.resolve-shared-resources.outputs.keyVaultName }} `
           -TenantId ${{ steps.deploy.outputs.tenantId }} `
           -EnableFrontdoor $${{ steps.resolve-shared-resources.outputs.enableFrontdoor == 'true' }}
