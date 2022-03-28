@@ -17,7 +17,8 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get object Id for performing role assignment."
 }
 
-az role assignment create --assignee $objectId --role "Key Vault Secrets User" --scope $acr.resourceGroup
+$resId = (az group show --name $acr.resourceGroup | ConvertFrom-Json).id
+az role assignment create --assignee $objectId --role "Key Vault Secrets User" --scope $resId
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to perform Key Vault Secrets User role asignment for aks."
 }
