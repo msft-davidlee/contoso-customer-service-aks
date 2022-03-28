@@ -85,7 +85,7 @@ jobs:
           -SqlUsername ${{ steps.deploy.outputs.sqlusername }} `
           -Backend ${{ steps.deploy.outputs.backend }} `
           -QueueType ${{ steps.resolve-shared-resources.outputs.queueType }} `
-          -AKSMSIId ${{ steps.deploy.outputs.managedIdentityId }} `
+          -AKSMSIId ${{ steps.resolve-shared-resources.outputs.managedIdentityClientId }} `
           -KeyVaultName ${{ steps.resolve-shared-resources.outputs.keyVaultName }} `
           -TenantId ${{ steps.deploy.outputs.tenantId }} `
           -EnableFrontdoor $${{ steps.resolve-shared-resources.outputs.enableFrontdoor == 'true' }}
