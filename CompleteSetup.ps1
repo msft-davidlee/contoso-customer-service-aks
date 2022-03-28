@@ -12,13 +12,12 @@ if ($LastExitCode -ne 0) {
 }
 
 $aksName = $aks.name
-$aksId = $aks.id
 $objectId = (az aks show -g $resourceGroupName -n $aksName --query addonProfiles.azureKeyvaultSecretsProvider.identity.objectId -o tsv)
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get object Id for performing role assignment."
 }
 
-az role assignment create --assignee $objectId --role "Key Vault Secrets User" --scope $aksId
+az role assignment create --assignee $objectId --role "Key Vault Secrets User" --scope $acr.resourceGroup
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to perform Key Vault Secrets User role asignment for aks."
 }
