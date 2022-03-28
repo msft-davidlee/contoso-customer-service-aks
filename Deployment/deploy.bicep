@@ -161,6 +161,8 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
       serviceCidr: '10.250.0.0/16'
       dnsServiceIP: '10.250.0.10'
     }
+    // We can provide a name but it cannot be existing
+    // https://docs.microsoft.com/en-us/azure/aks/faq#can-i-provide-my-own-name-for-the-aks-node-resource-group
     nodeResourceGroup: nodesResourceGroup
     agentPoolProfiles: [
       {

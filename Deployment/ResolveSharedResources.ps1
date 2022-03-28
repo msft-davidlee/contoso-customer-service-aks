@@ -47,7 +47,9 @@ $groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
 $appResourceGroup = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' }).name
 Write-Host "::set-output name=appResourceGroup::$appResourceGroup"
 
-$nodesResourceGroup = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks-nodes' }).name
+# We can provide a name but it cannot be existing
+# https://docs.microsoft.com/en-us/azure/aks/faq#can-i-provide-my-own-name-for-the-aks-node-resource-group
+$nodesResourceGroup = "$appResourceGroup-managed-nodes"
 Write-Host "::set-output name=nodesResourceGroup::$nodesResourceGroup"
 
 # https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-tutorial-use-key-vault
@@ -59,7 +61,7 @@ $identity = az identity list -g $appResourceGroup | ConvertFrom-Json
 $mid = $identity.id
 Write-Host "::set-output name=managedIdentityId::$mid"
 $clientId = $identity.clientId
-if (!$clientId){
+if (!$clientId) {
     throw "Unable to get client Id!"
 }
 Write-Host "::set-output name=managedIdentityClientId::$clientId"
