@@ -10,6 +10,7 @@ param aksMSIId string
 param queueType string
 param version string
 param lastUpdated string = utcNow('u')
+param nodesResourceGroup string
 
 var identity = {
   type: 'UserAssigned'
@@ -160,6 +161,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
       serviceCidr: '10.250.0.0/16'
       dnsServiceIP: '10.250.0.10'
     }
+    nodeResourceGroup: nodesResourceGroup
     agentPoolProfiles: [
       {
         name: 'agentpool'

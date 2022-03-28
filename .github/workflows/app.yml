@@ -69,6 +69,7 @@ jobs:
             branch=${{ github.ref }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}
+            nodesResourceGroup=${{ steps.resolve-shared-resources.outputs.nodesResourceGroup }}
             subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}            
 

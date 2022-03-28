@@ -47,6 +47,9 @@ $groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
 $appResourceGroup = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' }).name
 Write-Host "::set-output name=appResourceGroup::$appResourceGroup"
 
+$nodesResourceGroup = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks-nodes' }).name
+Write-Host "::set-output name=nodesResourceGroup::$nodesResourceGroup"
+
 # https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-tutorial-use-key-vault
 $keyVaultId = $kv.id
 Write-Host "::set-output name=keyVaultId::$keyVaultId"
