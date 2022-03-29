@@ -280,25 +280,10 @@ $content = $content.Replace('$VERSION', $version)
 
 Set-Content -Path ".\memberservice.yaml" -Value $content
 kubectl apply -f ".\memberservice.yaml" --namespace $namespace
-
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy member service app."
 }
 
-# Step 9: Deploy backend
-if ($QueueType -eq "ServiceBus") { 
-    $backendZip = "contoso-demo-service-bus-shipping-func-$version.zip"
-}
-
-if ($QueueType -eq "Storage") {
-    $backendZip = "contoso-demo-storage-queue-func-$version.zip"
-}
-
-az storage blob download --file $backendZip --container-name apps --name $backendZip --account-name $BuildAccountName
-az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend --src $backendZip
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to deploy backend."
-}
-
+# Step 9: Output ip address
 $serviceip = kubectl get ing demo-ingress -n myapps -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"
