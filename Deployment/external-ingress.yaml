@@ -33,3 +33,10 @@ spec:
               number: 80
         path: /members/(.*)
         pathType: Prefix
+      - backend:
+          service:
+            name: pointsservice
+            port:
+              number: 80
+        path: /points/(.*)
+        pathType: Prefix        
