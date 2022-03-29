@@ -35,6 +35,14 @@ spec:
             - name: secrets-store-memberservice
               mountPath: "/mnt/secrets-store"
               readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80              
         env:
         - name: DbSource
           value: $DBSOURCE
@@ -46,7 +54,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: contoso-customer-service-sql-password
-              key: contoso-customer-service-sql-password 
+              key: contoso-customer-service-sql-password
         - name: AlternateIdServiceUri
           value: http://alternateid.$NAMESPACE.svc.cluster.local          
         - name: ASPNETCORE_ENVIRONMENT

@@ -35,6 +35,14 @@ spec:
             - name: secrets-store-customerservice
               mountPath: "/mnt/secrets-store"
               readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80              
         env:
         - name: DbSource
           value: $DBSOURCE
