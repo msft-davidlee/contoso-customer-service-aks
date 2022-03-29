@@ -26,3 +26,10 @@ spec:
               number: 80
         path: /(.*)
         pathType: Prefix
+      - backend:
+          service:
+            name: memberservice
+            port:
+              number: 80
+        path: /members/(.*)
+        pathType: Prefix

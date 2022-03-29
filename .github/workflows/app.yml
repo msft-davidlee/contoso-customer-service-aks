@@ -88,6 +88,9 @@ jobs:
           -AKSMSIId ${{ steps.deploy.outputs.managedIdentityId }} `
           -KeyVaultName ${{ steps.resolve-shared-resources.outputs.keyVaultName }} `
           -TenantId ${{ steps.deploy.outputs.tenantId }} `
+          -QueueStorageName ${{ steps.deploy.outputs.queueStorageName }} `
+          -BackendStorageName ${{ steps.deploy.outputs.backendappStorageName }} `
+          -QueueName ${{ steps.deploy.outputs.queueName }} `
           -EnableFrontdoor $${{ steps.resolve-shared-resources.outputs.enableFrontdoor == 'true' }}
 
       - name: Build frontdoor

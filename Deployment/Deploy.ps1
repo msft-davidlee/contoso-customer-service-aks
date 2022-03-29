@@ -10,6 +10,9 @@ param(
     [Parameter(Mandatory = $true)][string]$AKSMSIId,
     [Parameter(Mandatory = $true)][string]$KeyVaultName,
     [Parameter(Mandatory = $true)][string]$TenantId,
+    [Parameter(Mandatory = $true)][string]$QueueStorageName,
+    [Parameter(Mandatory = $true)][string]$BackendStorageName,
+    [Parameter(Mandatory = $true)][string]$QueueName,
     [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
@@ -90,10 +93,20 @@ else {
     Write-Host "Skip adding ingress-nginx repo with helm as it already exist."
 }
 
+$foundHelmKedaCoreRepo = ($repoList | Where-Object { $_.name -eq "kedacore" }).Count -eq 1
+
+# Step 4a: Add the ingress-nginx repository
+if (!$foundHelmKedaCoreRepo) {
+    helm repo add kedacore https://kedacore.github.io/charts
+}
+else {
+    Write-Host "Skip adding kedacore repo with helm as it already exist."
+}
+
 helm repo update
 
 # Step 4b.
-$testSecret = (kubectl get secret aks-ingress-tls -o json -n myapps)
+$testSecret = (kubectl get secret aks-ingress-tls -o json -n $namespace)
 if (!$testSecret) {
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
     kubectl create secret tls aks-ingress-tls `
@@ -107,7 +120,11 @@ if (!$testSecret) {
 }
     
 # Step 4c. Install ingress controller
-helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+    --set controller.replicaCount=2 `
+    --set controller.metrics.enabled=true
+
+helm install keda kedacore/keda -n $namespace
 
 if ($EnableFrontdoor) {
     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
@@ -138,11 +155,12 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 5: Setup configuration for resources
-$dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+# $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
 # See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
-$base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
+# $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
 if ($QueueType -eq "ServiceBus") { 
+    $imageName = "contoso-demo-service-bus-shipping-func:$version"
     $SenderQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
         --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json    
     
@@ -150,18 +168,25 @@ if ($QueueType -eq "ServiceBus") {
         throw "An error has occured. Unable get service bus connection string."
     }
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
+
+    $ListenerQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
+        --namespace-name $AKS_NAME --name Listener --query primaryConnectionString | ConvertFrom-Json
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable get service bus listener connection string."
+    }
+    $QueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
 }
 
 if ($QueueType -eq "Storage") {
-    $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $AKS_NAME | ConvertFrom-Json)[0].value
+    $imageName = "contoso-demo-storage-queue-func:$version"
+    $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $QueueStorageName | ConvertFrom-Json)[0].value
 
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable get storage account key."
     }
 
-    $connStr = "DefaultEndpointsProtocol=https;AccountName=$AKS_NAME;AccountKey=$key1;EndpointSuffix=core.windows.net"
-    $connStr = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
-    $SenderQueueConnectionString = $connStr;
+    $QueueConnectionString = "DefaultEndpointsProtocol=https;AccountName=$QueueStorageName;AccountKey=$key1;EndpointSuffix=core.windows.net"
+    $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($QueueConnectionString ));
 }
 
 # Step: 5b: Configure Azure Key Vault
@@ -178,6 +203,27 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 6: Deploy customer service app.
+
+$backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendStorageName | ConvertFrom-Json)[0].value
+$backendConn = "DefaultEndpointsProtocol=https;AccountName=$BackendStorageName;AccountKey=$backendKey;EndpointSuffix=core.windows.net"
+
+$content = Get-Content .\Deployment\backendservice.yaml
+$content = $content.Replace('$IMAGE', $imageName)
+$content = $content.Replace('$DBSOURCE', $SqlServer)
+$content = $content.Replace('$DBNAME', $DbName)
+$content = $content.Replace('$DBUSERID', $SqlUsername)
+$content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$AZURE_STORAGE_CONNECTION', $backendConn)
+$content = $content.Replace('$AZURE_STORAGEQUEUE_CONNECTION', $QueueConnectionString)
+$content = $content.Replace('$QUEUENAME', $QueueName)
+
+Set-Content -Path ".\backendservice.yaml" -Value $content
+kubectl apply -f ".\backendservice.yaml" --namespace $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy backend service app."
+}
+
+# Step 7: Deploy customer service app.
 $content = Get-Content .\Deployment\customerservice.yaml
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
@@ -200,7 +246,7 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy customer service app."
 }
 
-# Step 7: Deploy Alternate Id service.
+# Step 8: Deploy Alternate Id service.
 $content = Get-Content .\Deployment\alternateid.yaml
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
@@ -222,7 +268,7 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy alternate id app."
 }
 
-# Step 8: Deploy Partner api.
+# Step 9: Deploy Partner api.
 $content = Get-Content .\Deployment\partnerapi.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
@@ -258,25 +304,36 @@ $content = $content.Replace('$VERSION', $version)
 
 Set-Content -Path ".\memberservice.yaml" -Value $content
 kubectl apply -f ".\memberservice.yaml" --namespace $namespace
-
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy member service app."
 }
 
-# Step 9: Deploy backend
+# Step 10: Function scaling based on specific scalers
 if ($QueueType -eq "ServiceBus") { 
-    $backendZip = "contoso-demo-service-bus-shipping-func-$version.zip"
+    $content = Get-Content .\Deployment\backendservicebus.yaml
+    $content = $content.Replace('$QUEUENAME', $QueueName)
+    $content = $content.Replace('$BASE64CONNECTIONSTRING', $ListenerQueueConnectionString)
+
+    Set-Content -Path ".\backendservicebus.yaml" -Value $content
+    kubectl apply -f ".\backendservicebus.yaml" --namespace $namespace
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to deploy service bus keda scaler."
+    }
 }
 
 if ($QueueType -eq "Storage") {
-    $backendZip = "contoso-demo-storage-queue-func-$version.zip"
+    $content = Get-Content .\Deployment\backendstorage.yaml
+    $content = $content.Replace('$QUEUENAME', $QueueName)
+    $content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
+    $content = $content.Replace('$STORAGEACCOUNTNAME', $BackendStorageName)
+
+    Set-Content -Path ".\backendstorage.yaml" -Value $content
+    kubectl apply -f ".\backendstorage.yaml" --namespace $namespace
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to deploy storage keda scaler."
+    }
 }
 
-az storage blob download --file $backendZip --container-name apps --name $backendZip --account-name $BuildAccountName
-az functionapp deployment source config-zip -g $AKS_RESOURCE_GROUP -n $Backend --src $backendZip
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to deploy backend."
-}
-
-$serviceip = kubectl get ing demo-ingress -n myapps -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+# Step 11: Output ip address
+$serviceip = kubectl get ing demo-ingress -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"

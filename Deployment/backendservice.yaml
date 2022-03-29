@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backendservice  
+spec:
+  selector:
+    matchLabels:
+      app: backendservice
+  template:
+    metadata:
+      labels:
+        app: backendservice
+    spec:
+      volumes:
+      - name: secrets-store-backendservice
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "azure-kvname-podid"    
+      containers:
+        - name: backendservice
+          image: $ACRNAME.azurecr.io/$IMAGE
+          env:
+          - name: AzureWebJobsDashboard
+            value: "$AZURE_STORAGE_CONNECTION"
+          - name: AzureWebJobsStorage
+            value: "$AZURE_STORAGE_CONNECTION"
+          - name: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING
+            value: "$AZURE_STORAGE_CONNECTION"
+          - name: WEBSITE_CONTENTSHARE
+            value: "functions2022"            
+          - name: Connection
+            value: "$AZURE_STORAGEQUEUE_CONNECTION"            
+          - name: FUNCTIONS_WORKER_RUNTIME
+            value: "dotnet"
+          - name: FUNCTIONS_EXTENSION_VERSION
+            value: "~4"
+          - name: DbSource
+            value: $DBSOURCE            
+          - name: QueueName
+            value: $QUEUENAME
+          - name: DbName
+            value: $DBNAME
+          - name: DbUserId
+            value: $DBUSERID
+          - name: DbPassword
+            valueFrom:
+              secretKeyRef:
+                name: contoso-customer-service-sql-password
+                key: contoso-customer-service-sql-password
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+              - name: secrets-store-backendservice
+                mountPath: "/mnt/secrets-store"
+                readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backendservice
+  labels:
+    app: backendservice
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: backendservice
