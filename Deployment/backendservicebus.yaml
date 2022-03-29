@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: servicebustrigger-dotfile-secret
+data:
+  .secret-conn-file: "$BASE64CONNECTIONSTRING"
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: azure-servicebus-auth
+spec:
+  secretTargetRef:
+  - parameter: connection
+    name: servicebustrigger-dotfile-secret
+    key: .secret-conn-file
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: backendservice-queue-scaledobject
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: backendservice
+  triggers:
+  - type: azure-servicebus
+    metadata:      
+      queueName: $QUEUENAME      
+      # Optional
+      messageCount: "5" # default 5
+    authenticationRef:
+        name: azure-servicebus-auth
