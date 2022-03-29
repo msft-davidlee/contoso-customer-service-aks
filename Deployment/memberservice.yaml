@@ -46,7 +46,15 @@ spec:
           valueFrom:
             secretKeyRef:
               name: contoso-customer-service-sql-password
-              key: contoso-customer-service-sql-password 
+              key: contoso-customer-service-sql-password
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
         - name: AlternateIdServiceUri
           value: http://alternateid.$NAMESPACE.svc.cluster.local          
         - name: ASPNETCORE_ENVIRONMENT

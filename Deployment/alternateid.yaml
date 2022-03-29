@@ -35,6 +35,14 @@ spec:
             - name: secrets-store-alternateid
               mountPath: "/mnt/secrets-store"
               readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
         env:
         - name: DbSource
           value: $DBSOURCE
