@@ -26,7 +26,7 @@ spec:
               number: 80
         path: /(.*)
         pathType: Prefix
-      - memberservice:
+      - backend:
           service:
             name: memberservice
             port:
