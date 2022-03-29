@@ -185,9 +185,8 @@ if ($QueueType -eq "Storage") {
         throw "An error has occured. Unable get storage account key."
     }
 
-    $connStr = "DefaultEndpointsProtocol=https;AccountName=$AKS_NAME;AccountKey=$key1;EndpointSuffix=core.windows.net"
-    $QueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
-    $SenderQueueConnectionString = $QueueConnectionString;    
+    $QueueConnectionString = "DefaultEndpointsProtocol=https;AccountName=$QueueStorageName;AccountKey=$key1;EndpointSuffix=core.windows.net"    
+    $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr));    
 }
 
 # Step: 5b: Configure Azure Key Vault
