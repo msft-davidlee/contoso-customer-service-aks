@@ -89,7 +89,7 @@ resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2
 
 resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-06-01-preview' = if (queueType == 'ServiceBus') {
   parent: sbu
-  name: 'orders'
+  name: queueName
   properties: {
     lockDuration: 'PT30S'
     maxSizeInMegabytes: 1024
@@ -210,6 +210,7 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   tags: tags
 }
 
+output queueName string = queueName
 output backendappStorageName string = backendappStr.name
 output backend string = backendapp
 output aadinstance string = environment().authentication.loginEndpoint

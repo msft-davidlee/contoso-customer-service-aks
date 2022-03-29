@@ -11,6 +11,7 @@ param(
     [Parameter(Mandatory = $true)][string]$KeyVaultName,
     [Parameter(Mandatory = $true)][string]$TenantId,    
     [Parameter(Mandatory = $true)][string]$BackendStorageName,
+    [Parameter(Mandatory = $true)][string]$QueueName,
     [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
@@ -153,9 +154,9 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 5: Setup configuration for resources
-$dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+# $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
 # See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
-$base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
+# $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
 if ($QueueType -eq "ServiceBus") { 
     $imageName = "contoso-demo-service-bus-shipping-func:$version"
@@ -166,6 +167,13 @@ if ($QueueType -eq "ServiceBus") {
         throw "An error has occured. Unable get service bus connection string."
     }
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
+
+    $ListenerQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
+        --namespace-name $AKS_NAME --name Listener --query primaryConnectionString | ConvertFrom-Json
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable get service bus listener connection string."
+    }
+    $QueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
 }
 
 if ($QueueType -eq "Storage") {
@@ -177,8 +185,8 @@ if ($QueueType -eq "Storage") {
     }
 
     $connStr = "DefaultEndpointsProtocol=https;AccountName=$AKS_NAME;AccountKey=$key1;EndpointSuffix=core.windows.net"
-    $connStr = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
-    $SenderQueueConnectionString = $connStr;
+    $QueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($connStr))
+    $SenderQueueConnectionString = $QueueConnectionString;    
 }
 
 # Step: 5b: Configure Azure Key Vault
@@ -206,7 +214,7 @@ $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$AZURE_STORAGE_CONNECTION', $backendConn)
-$content = $content.Replace('$AZURE_STORAGEQUEUE_CONNECTION', $SenderQueueConnectionString)
+$content = $content.Replace('$AZURE_STORAGEQUEUE_CONNECTION', $QueueConnectionString)
 
 Set-Content -Path ".\backendservice.yaml" -Value $content
 kubectl apply -f ".\backendservice.yaml" --namespace $namespace
@@ -299,6 +307,32 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy member service app."
 }
 
-# Step 9: Output ip address
+# Step 10: Function scaling based on specific scalers
+if ($QueueType -eq "ServiceBus") { 
+    $content = Get-Content .\Deployment\backendservicebus.yaml
+    $content = $content.Replace('$QUEUENAME', $QueueName)
+    $content = $content.Replace('$BASE64CONNECTIONSTRING', $ListenerQueueConnectionString)
+
+    Set-Content -Path ".\backendservicebus.yaml" -Value $content
+    kubectl apply -f ".\backendservicebus.yaml" --namespace $namespace
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to deploy member service app."
+    }
+}
+
+if ($QueueType -eq "Storage") {
+    $content = Get-Content .\Deployment\backendstorage.yaml
+    $content = $content.Replace('$QUEUENAME', $QueueName)
+    $content = $content.Replace('$BASE64CONNECTIONSTRING', $QueueConnectionString)
+    $content = $content.Replace('$STORAGEACCOUNTNAME', $BackendStorageName)
+
+    Set-Content -Path ".\backendstorage.yaml" -Value $content
+    kubectl apply -f ".\backendstorage.yaml" --namespace $namespace
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to deploy member service app."
+    }
+}
+
+# Step 11: Output ip address
 $serviceip = kubectl get ing demo-ingress -n myapps -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"
