@@ -91,6 +91,16 @@ else {
     Write-Host "Skip adding ingress-nginx repo with helm as it already exist."
 }
 
+$foundHelmKedaCoreRepo = ($repoList | Where-Object { $_.name -eq "kedacore" }).Count -eq 1
+
+# Step 4a: Add the ingress-nginx repository
+if (!$foundHelmKedaCoreRepo) {
+    helm repo add kedacore https://kedacore.github.io/charts
+}
+else {
+    Write-Host "Skip adding kedacore repo with helm as it already exist."
+}
+
 helm repo update
 
 # Step 4b.
@@ -108,7 +118,11 @@ if (!$testSecret) {
 }
     
 # Step 4c. Install ingress controller
-helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+    --set controller.replicaCount=2 `
+    --set controller.metrics.enabled=true
+
+helm install keda kedacore/keda -n $namespace
 
 if ($EnableFrontdoor) {
     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
@@ -186,6 +200,7 @@ $backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendSt
 $backendConn = "DefaultEndpointsProtocol=https;AccountName=$BackendStorageName;AccountKey=$backendKey;EndpointSuffix=core.windows.net"
 
 $content = Get-Content .\Deployment\backendservice.yaml
+$content = $content.Replace('$IMAGE', $imageName)
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
