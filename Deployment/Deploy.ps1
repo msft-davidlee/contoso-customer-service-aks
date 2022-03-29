@@ -199,7 +199,7 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy backend service app."
 }
 
-# Step 6: Deploy customer service app.
+# Step 7: Deploy customer service app.
 $content = Get-Content .\Deployment\customerservice.yaml
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
@@ -222,7 +222,7 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy customer service app."
 }
 
-# Step 7: Deploy Alternate Id service.
+# Step 8: Deploy Alternate Id service.
 $content = Get-Content .\Deployment\alternateid.yaml
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
@@ -244,7 +244,7 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy alternate id app."
 }
 
-# Step 8: Deploy Partner api.
+# Step 9: Deploy Partner api.
 $content = Get-Content .\Deployment\partnerapi.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
