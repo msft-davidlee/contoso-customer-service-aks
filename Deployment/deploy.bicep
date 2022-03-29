@@ -210,9 +210,7 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   tags: tags
 }
 
-var backendappConnection = 'DefaultEndpointsProtocol=https;AccountName=${backendappStr.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(backendappStr.id, backendappStr.apiVersion).keys[0].value}'
-
-output backendappConnectionString string = backendappConnection
+output backendappStorageName string = backendappStr.name
 output backend string = backendapp
 output aadinstance string = environment().authentication.loginEndpoint
 output stackname string = stackName

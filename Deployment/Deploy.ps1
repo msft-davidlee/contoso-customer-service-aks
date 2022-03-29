@@ -10,7 +10,7 @@ param(
     [Parameter(Mandatory = $true)][string]$AKSMSIId,
     [Parameter(Mandatory = $true)][string]$KeyVaultName,
     [Parameter(Mandatory = $true)][string]$TenantId,    
-    [Parameter(Mandatory = $true)][string]$BackendAppConnectionString,
+    [Parameter(Mandatory = $true)][string]$BackendStorageName,
     [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
@@ -181,12 +181,16 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 6: Deploy customer service app.
+
+$backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendStorageName | ConvertFrom-Json)[0].value
+$backendConn = "DefaultEndpointsProtocol=https;AccountName=$BackendStorageName;AccountKey=$backendKey;EndpointSuffix=core.windows.net"
+
 $content = Get-Content .\Deployment\backendservice.yaml
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
-$content = $content.Replace('$AZURE_STORAGE_CONNECTION', $BackendAppConnectionString)
+$content = $content.Replace('$AZURE_STORAGE_CONNECTION', $backendConn)
 $content = $content.Replace('$AZURE_STORAGEQUEUE_CONNECTION', $SenderQueueConnectionString)
 
 Set-Content -Path ".\backendservice.yaml" -Value $content
