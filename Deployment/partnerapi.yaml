@@ -51,11 +51,11 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 80
         readinessProbe:
           httpGet:
             path: /health
-            port: http              
+            port: 80              
         env:
         - name: DbSource
           value: $DBSOURCE
