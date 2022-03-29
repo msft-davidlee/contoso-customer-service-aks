@@ -9,7 +9,8 @@ param(
     [Parameter(Mandatory = $true)][string]$QueueType,
     [Parameter(Mandatory = $true)][string]$AKSMSIId,
     [Parameter(Mandatory = $true)][string]$KeyVaultName,
-    [Parameter(Mandatory = $true)][string]$TenantId,
+    [Parameter(Mandatory = $true)][string]$TenantId,    
+    [Parameter(Mandatory = $true)][string]$BackendAppConnectionString,
     [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
@@ -143,6 +144,7 @@ $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persis
 $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
 if ($QueueType -eq "ServiceBus") { 
+    $imageName = "contoso-demo-service-bus-shipping-func:$version"
     $SenderQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
         --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json    
     
@@ -153,6 +155,7 @@ if ($QueueType -eq "ServiceBus") {
 }
 
 if ($QueueType -eq "Storage") {
+    $imageName = "contoso-demo-storage-queue-func:$version"
     $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $AKS_NAME | ConvertFrom-Json)[0].value
 
     if ($LastExitCode -ne 0) {
@@ -175,6 +178,21 @@ kubectl apply -f ".\azurekeyvault.yaml" --namespace $namespace
 
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy azure key vault app."
+}
+
+# Step 6: Deploy customer service app.
+$content = Get-Content .\Deployment\backendservice.yaml
+$content = $content.Replace('$DBSOURCE', $SqlServer)
+$content = $content.Replace('$DBNAME', $DbName)
+$content = $content.Replace('$DBUSERID', $SqlUsername)
+$content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$AZURE_STORAGE_CONNECTION', $BackendAppConnectionString)
+$content = $content.Replace('$AZURE_STORAGEQUEUE_CONNECTION', $SenderQueueConnectionString)
+
+Set-Content -Path ".\backendservice.yaml" -Value $content
+kubectl apply -f ".\backendservice.yaml" --namespace $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy backend service app."
 }
 
 # Step 6: Deploy customer service app.

@@ -12,13 +12,6 @@ param version string
 param lastUpdated string = utcNow('u')
 param nodesResourceGroup string
 
-var identity = {
-  type: 'UserAssigned'
-  userAssignedIdentities: {
-    '${aksMSIId}': {}
-  }
-}
-
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
   'stack-name': 'contoso-customer-service-aks'
@@ -217,97 +210,9 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   tags: tags
 }
 
-resource backendappplan 'Microsoft.Web/serverfarms@2020-10-01' = {
-  name: backendapp
-  location: location
-  tags: tags
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-  }
-}
-
-var queueConnectionString = (queueType == 'Storage') ? 'DefaultEndpointsProtocol=https;AccountName=${stackName};AccountKey=${listKeys(str.id, str.apiVersion).keys[0].value};EndpointSuffix=core.windows.net' : '${listKeys(sbuListenAuthRule.id, sbu.apiVersion).primaryConnectionString}'
-
 var backendappConnection = 'DefaultEndpointsProtocol=https;AccountName=${backendappStr.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(backendappStr.id, backendappStr.apiVersion).keys[0].value}'
-resource backendfuncapp 'Microsoft.Web/sites@2020-12-01' = {
-  name: backendapp
-  location: location
-  tags: tags
-  kind: 'functionapp'
-  identity: identity
-  properties: {
-    keyVaultReferenceIdentity: aksMSIId
-    httpsOnly: true
-    serverFarmId: backendappplan.id
-    clientAffinityEnabled: true
-    siteConfig: {
-      webSocketsEnabled: true
-      appSettings: [
-        {
-          'name': 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          'value': appinsights.properties.InstrumentationKey
-        }
-        {
-          name: 'DbSource'
-          value: sql.outputs.sqlFqdn
-        }
-        {
-          name: 'DbName'
-          value: sql.outputs.dbName
-        }
-        {
-          name: 'DbUserId'
-          value: sqlUsername
-        }
-        {
-          name: 'DbPassword'
-          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=contoso-customer-service-sql-password)'
-        }
-        {
-          'name': 'AzureWebJobsDashboard'
-          'value': backendappConnection
-        }
-        {
-          'name': 'AzureWebJobsStorage'
-          'value': backendappConnection
-        }
-        {
-          'name': 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          'value': backendappConnection
-        }
-        {
-          'name': 'WEBSITE_CONTENTSHARE'
-          'value': 'functions2021'
-        }
-        {
-          'name': 'QueueName'
-          'value': queueName
-        }
-        {
-          'name': 'Connection'
-          'value': queueConnectionString
-        }
-        {
-          'name': 'FUNCTIONS_WORKER_RUNTIME'
-          'value': 'dotnet'
-        }
-        {
-          'name': 'FUNCTIONS_EXTENSION_VERSION'
-          'value': '~4'
-        }
-        {
-          'name': 'ApplicationInsightsAgent_EXTENSION_VERSION'
-          'value': '~2'
-        }
-        {
-          'name': 'XDT_MicrosoftApplicationInsights_Mode'
-          'value': 'default'
-        }
-      ]
-    }
-  }
-}
+
+output backendappConnectionString string = backendappConnection
 output backend string = backendapp
 output aadinstance string = environment().authentication.loginEndpoint
 output stackname string = stackName
