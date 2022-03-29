@@ -18,8 +18,7 @@ spec:
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: backendservice-queue-scaledobject
-  namespace: default
+  name: backendservice-queue-scaledobject  
 spec:
   scaleTargetRef:
     name: backendservice

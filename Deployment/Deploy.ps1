@@ -9,7 +9,8 @@ param(
     [Parameter(Mandatory = $true)][string]$QueueType,
     [Parameter(Mandatory = $true)][string]$AKSMSIId,
     [Parameter(Mandatory = $true)][string]$KeyVaultName,
-    [Parameter(Mandatory = $true)][string]$TenantId,    
+    [Parameter(Mandatory = $true)][string]$TenantId,
+    [Parameter(Mandatory = $true)][string]$QueueStorageName,
     [Parameter(Mandatory = $true)][string]$BackendStorageName,
     [Parameter(Mandatory = $true)][string]$QueueName,
     [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
@@ -105,7 +106,7 @@ else {
 helm repo update
 
 # Step 4b.
-$testSecret = (kubectl get secret aks-ingress-tls -o json -n myapps)
+$testSecret = (kubectl get secret aks-ingress-tls -o json -n $namespace)
 if (!$testSecret) {
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
     kubectl create secret tls aks-ingress-tls `
@@ -178,7 +179,7 @@ if ($QueueType -eq "ServiceBus") {
 
 if ($QueueType -eq "Storage") {
     $imageName = "contoso-demo-storage-queue-func:$version"
-    $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $AKS_NAME | ConvertFrom-Json)[0].value
+    $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $QueueStorageName | ConvertFrom-Json)[0].value
 
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable get storage account key."
@@ -316,7 +317,7 @@ if ($QueueType -eq "ServiceBus") {
     Set-Content -Path ".\backendservicebus.yaml" -Value $content
     kubectl apply -f ".\backendservicebus.yaml" --namespace $namespace
     if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to deploy member service app."
+        throw "An error has occured. Unable to deploy service bus keda scaler."
     }
 }
 
@@ -329,10 +330,10 @@ if ($QueueType -eq "Storage") {
     Set-Content -Path ".\backendstorage.yaml" -Value $content
     kubectl apply -f ".\backendstorage.yaml" --namespace $namespace
     if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to deploy member service app."
+        throw "An error has occured. Unable to deploy storage keda scaler."
     }
 }
 
 # Step 11: Output ip address
-$serviceip = kubectl get ing demo-ingress -n myapps -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+$serviceip = kubectl get ing demo-ingress -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"

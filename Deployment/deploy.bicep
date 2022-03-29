@@ -211,6 +211,7 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
 }
 
 output queueName string = queueName
+output queueStorageName string = str.name
 output backendappStorageName string = backendappStr.name
 output backend string = backendapp
 output aadinstance string = environment().authentication.loginEndpoint
