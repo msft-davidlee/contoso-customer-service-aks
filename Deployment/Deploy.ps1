@@ -323,7 +323,7 @@ if ($QueueType -eq "ServiceBus") {
 if ($QueueType -eq "Storage") {
     $content = Get-Content .\Deployment\backendstorage.yaml
     $content = $content.Replace('$QUEUENAME', $QueueName)
-    $content = $content.Replace('$BASE64CONNECTIONSTRING', $QueueConnectionString)
+    $content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
     $content = $content.Replace('$STORAGEACCOUNTNAME', $BackendStorageName)
 
     Set-Content -Path ".\backendstorage.yaml" -Value $content
