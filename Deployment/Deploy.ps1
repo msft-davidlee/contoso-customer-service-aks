@@ -215,6 +215,7 @@ $content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$AZURE_STORAGE_CONNECTION', $backendConn)
 $content = $content.Replace('$AZURE_STORAGEQUEUE_CONNECTION', $QueueConnectionString)
+$content = $content.Replace('$QUEUENAME', $QueueName)
 
 Set-Content -Path ".\backendservice.yaml" -Value $content
 kubectl apply -f ".\backendservice.yaml" --namespace $namespace
