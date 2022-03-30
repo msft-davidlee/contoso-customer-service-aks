@@ -55,7 +55,7 @@ $strs = GetResource -stackName shared-storage -stackEnvironment prod
 $BuildAccountName = $strs.name
 
 # The version here can be configurable so we can also pull dev specific packages.
-$version = "v4.6"
+$version = "v4.7"
 
 az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern *$version*.zip
 if ($LastExitCode -ne 0) {
