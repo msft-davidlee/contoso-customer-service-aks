@@ -26,6 +26,6 @@ spec:
   - type: azure-servicebus
     metadata:      
       queueName: $QUEUENAME      
-      messageCount: "5"
+      messageCount: "50"
     authenticationRef:
         name: azure-servicebus-auth
