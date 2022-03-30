@@ -343,7 +343,7 @@ if ($LastExitCode -ne 0) {
 if ($QueueType -eq "ServiceBus") { 
     $content = Get-Content .\Deployment\backendservicebus.yaml
     $content = $content.Replace('$QUEUENAME', $QueueName)
-    $content = $content.Replace('$BASE64CONNECTIONSTRING', $ListenerQueueConnectionString)
+    $content = $content.Replace('$BASE64CONNECTIONSTRING', $QueueConnectionString)
 
     Set-Content -Path ".\backendservicebus.yaml" -Value $content
     kubectl apply -f ".\backendservicebus.yaml" --namespace $namespace
