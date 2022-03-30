@@ -39,4 +39,11 @@ spec:
             port:
               number: 80
         path: /points/(.*)
-        pathType: Prefix        
+        pathType: Prefix
+      - backend:
+          service:
+            name: partnerapi
+            port:
+              number: 80
+        path: /partner/(.*)
+        pathType: Prefix           
