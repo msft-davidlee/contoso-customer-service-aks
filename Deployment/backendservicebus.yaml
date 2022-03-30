@@ -18,10 +18,14 @@ spec:
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: backendservice-queue-scaledobject  
+  name: backendservice-queue-scaledobject
 spec:
   scaleTargetRef:
     name: backendservice
+  pollingInterval: 30
+  cooldownPeriod:  300
+  minReplicaCount: 1
+  maxReplicaCount: 50    
   triggers:
   - type: azure-servicebus
     metadata:      
