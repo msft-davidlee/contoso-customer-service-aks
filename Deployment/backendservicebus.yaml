@@ -2,8 +2,10 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: servicebustrigger-dotfile-secret
+  labels:
+    app: backendservice  
 data:
-  secret-conn-file: $BASE64CONNECTIONSTRING
+  servicebus-connectionstring: $BASE64CONNECTIONSTRING
 ---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
@@ -13,7 +15,7 @@ spec:
   secretTargetRef:
   - parameter: connection
     name: servicebustrigger-dotfile-secret
-    key: secret-conn-file
+    key: servicebus-connectionstring
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject

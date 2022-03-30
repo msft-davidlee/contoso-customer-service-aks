@@ -157,9 +157,6 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 5: Setup configuration for resources
-# $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
-# See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
-# $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
 if ($QueueType -eq "ServiceBus") { 
     $imageName = "contoso-demo-service-bus-shipping-func:$version"
@@ -211,7 +208,6 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 6: Deploy customer service app.
-
 $backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendStorageName | ConvertFrom-Json)[0].value
 $backendConn = "DefaultEndpointsProtocol=https;AccountName=$BackendStorageName;AccountKey=$backendKey;EndpointSuffix=core.windows.net"
 
