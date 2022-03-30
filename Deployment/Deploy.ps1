@@ -171,12 +171,12 @@ if ($QueueType -eq "ServiceBus") {
     }
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
 
-    $ListenerQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
+    $QueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
         --namespace-name $AKS_NAME --name Listener --query primaryConnectionString | ConvertFrom-Json
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable get service bus listener connection string."
     }
-    $QueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
+    $ListenerQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
 }
 
 if ($QueueType -eq "Storage") {
@@ -343,7 +343,7 @@ if ($LastExitCode -ne 0) {
 if ($QueueType -eq "ServiceBus") { 
     $content = Get-Content .\Deployment\backendservicebus.yaml
     $content = $content.Replace('$QUEUENAME', $QueueName)
-    $content = $content.Replace('$BASE64CONNECTIONSTRING', $QueueConnectionString)
+    $content = $content.Replace('$BASE64CONNECTIONSTRING', $ListenerQueueConnectionString)
 
     Set-Content -Path ".\backendservicebus.yaml" -Value $content
     kubectl apply -f ".\backendservicebus.yaml" --namespace $namespace
