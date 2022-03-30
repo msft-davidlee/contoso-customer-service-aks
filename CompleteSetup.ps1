@@ -3,7 +3,7 @@ param($BUILD_ENV)
 $groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
 $resourceGroupName = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' -and $_.tags.'stack-environment' -eq $BUILD_ENV }).name
 $aks = (az resource list -g $resourceGroupName --resource-type "Microsoft.ContainerService/managedClusters" | ConvertFrom-Json)[0]
-az aks get-credentials -n $aks.name -g $resourceGroupName
+az aks get-credentials -n $aks.name -g $resourceGroupName --overwrite-existing
 $acr = (az resource list --tag stack-name='shared-container-registry' | ConvertFrom-Json)[0]
 $acrName = $acr.name
 az aks update -n $aks.name -g $resourceGroupName --attach-acr $acrName
