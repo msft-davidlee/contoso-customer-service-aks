@@ -122,7 +122,9 @@ if (!$testSecret) {
 # Step 4c. Install ingress controller
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     --set controller.replicaCount=2 `
-    --set controller.metrics.enabled=true
+    --set controller.metrics.enabled=true `
+    --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+    --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 
 helm install keda kedacore/keda -n $namespace
 
