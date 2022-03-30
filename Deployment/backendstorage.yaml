@@ -22,6 +22,9 @@ metadata:
 spec:
   scaleTargetRef:
     name: backendservice
+  replicas:
+      min: 1
+      max: 20
   triggers:
   - type: azure-queue
     metadata:
