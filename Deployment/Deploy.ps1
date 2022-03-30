@@ -202,6 +202,12 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy azure key vault app."
 }
 
+# Step: 5c: Configure Prometheus
+kubectl apply --kustomize Deployment/prometheus -n $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to apply prometheus directory."
+}
+
 # Step 6: Deploy customer service app.
 
 $backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendStorageName | ConvertFrom-Json)[0].value
@@ -272,6 +278,7 @@ if ($LastExitCode -ne 0) {
 $content = Get-Content .\Deployment\partnerapi.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
