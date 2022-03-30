@@ -176,7 +176,7 @@ if ($QueueType -eq "ServiceBus") {
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable get service bus listener connection string."
     }
-    $ListenerQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
+    $ListenerQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($QueueConnectionString))
 }
 
 if ($QueueType -eq "Storage") {
