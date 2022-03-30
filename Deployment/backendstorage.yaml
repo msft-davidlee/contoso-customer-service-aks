@@ -27,6 +27,6 @@ spec:
     metadata:
       queueName: $QUEUENAME
       accountName: $STORAGEACCOUNTNAME
-      queueLength: "10"
+      queueLength: "50"
     authenticationRef:
         name: azure-queue-auth
