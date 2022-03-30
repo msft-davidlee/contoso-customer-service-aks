@@ -55,7 +55,7 @@ $strs = GetResource -stackName shared-storage -stackEnvironment prod
 $BuildAccountName = $strs.name
 
 # The version here can be configurable so we can also pull dev specific packages.
-$version = "v4.4"
+$version = "v4.6"
 
 az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern *$version*.zip
 if ($LastExitCode -ne 0) {
@@ -122,7 +122,9 @@ if (!$testSecret) {
 # Step 4c. Install ingress controller
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     --set controller.replicaCount=2 `
-    --set controller.metrics.enabled=true
+    --set controller.metrics.enabled=true `
+    --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+    --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 
 helm install keda kedacore/keda -n $namespace
 
@@ -202,6 +204,12 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy azure key vault app."
 }
 
+# Step: 5c: Configure Prometheus
+kubectl apply --kustomize Deployment/prometheus -n $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to apply prometheus directory."
+}
+
 # Step 6: Deploy customer service app.
 
 $backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendStorageName | ConvertFrom-Json)[0].value
@@ -272,6 +280,7 @@ if ($LastExitCode -ne 0) {
 $content = Get-Content .\Deployment\partnerapi.yaml
 $content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
 $content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
@@ -308,7 +317,29 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy member service app."
 }
 
-# Step 10: Function scaling based on specific scalers
+# Step 10: Deploy Points service.
+$content = Get-Content .\Deployment\pointsservice.yaml
+$content = $content.Replace('$DBSOURCE', $SqlServer)
+$content = $content.Replace('$DBNAME', $DbName)
+$content = $content.Replace('$DBUSERID', $SqlUsername)
+$content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$NAMESPACE', $namespace)
+
+$content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
+$content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
+$content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
+$content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
+$content = $content.Replace('$AADAUDIENCE', $AAD_AUDIENCE)
+
+$content = $content.Replace('$VERSION', $version)
+
+Set-Content -Path ".\pointsservice.yaml" -Value $content
+kubectl apply -f ".\pointsservice.yaml" --namespace $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy points service app."
+}
+
+# Step 11: Function scaling based on specific scalers
 if ($QueueType -eq "ServiceBus") { 
     $content = Get-Content .\Deployment\backendservicebus.yaml
     $content = $content.Replace('$QUEUENAME', $QueueName)
@@ -334,6 +365,6 @@ if ($QueueType -eq "Storage") {
     }
 }
 
-# Step 11: Output ip address
+# Step 12: Output ip address
 $serviceip = kubectl get ing demo-ingress -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"

@@ -35,6 +35,20 @@ After that, in the App Configuration, you will need to configure the follow to e
 | MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
 | PREFIX | mytodos - or whatever name you would like for all your resources |
 
+# Performance Testing
+1. For running a performance test, you can craft a payload against the Order endpoint https://demo.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
+```
+{
+    "productId": "FFF01",
+    "memberId": "8549494944"
+}
+```
+1. Run the following command to get the pods that are running: ``` kubectl get pods -n myapps ```
+2. To watch for running pods, run the following command ``` kubectl get pods -o=name --field-selector=status.phase=Running -n myapps --watch ```
+3. To observe the HPA in action, run ``` kubectl describe hpa -n myapps ``` For a simple version, run ``` kubectl get hpa -n myapps ```
+4. You can also review the insights view of your AKS cluster as well as Storage insights for how the "db" is handling your load.
+5. When you navigate to https://demo.contoso.com/prometheus, you will be able to redirect to Prometheus to view the requests. Try the following command to see the load: ``` rate(nginx_ingress_controller_requests[1m]) ``
+
 # Troubleshooting
 1. NSG applied on your AKS Subnet may be impacting access to the site. Be sure to open both ports 80 and 443.
 3. You may have notice the following configuration in external-ingress.yaml

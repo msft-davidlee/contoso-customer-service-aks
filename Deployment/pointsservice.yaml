@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pointsservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pointsservice
+  template:
+    metadata:
+      labels:
+        app: pointsservice
+    spec:
+      volumes:
+      - name: secrets-store-pointsservice
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "azure-kvname-podid"
+      containers:
+      - name: pointsservice
+        image: $ACRNAME.azurecr.io/contoso-demo-member-points-service:$VERSION
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+        volumeMounts:
+            - name: secrets-store-pointsservice
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80              
+        env:
+        - name: DbSource
+          value: $DBSOURCE
+        - name: DbName
+          value: $DBNAME
+        - name: DbUserId
+          value: $DBUSERID
+        - name: DbPassword
+          valueFrom:
+            secretKeyRef:
+              name: contoso-customer-service-sql-password
+              key: contoso-customer-service-sql-password      
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: AzureAd__Instance
+          value: $AADINSTANCE
+        - name: AzureAd__TenantId
+          value: $AADTENANTID
+        - name: AzureAd__Domain
+          value: $AADDOMAIN
+        - name: AzureAd__ClientId
+          value: $AADCLIENTID
+        - name: AzureAd__Audience
+          value: $AADAUDIENCE              
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pointsservice
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+  selector:
+    app: pointsservice

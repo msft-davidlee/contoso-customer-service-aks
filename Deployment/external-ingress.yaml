@@ -33,3 +33,24 @@ spec:
               number: 80
         path: /members/(.*)
         pathType: Prefix
+      - backend:
+          service:
+            name: pointsservice
+            port:
+              number: 80
+        path: /points/(.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: partnerapi
+            port:
+              number: 80
+        path: /partner/(.*)
+        pathType: Prefix
+      - backend:
+          service:
+              name: prometheus-server
+              port:
+                  number: 9090
+        path: /prometheus/(.*)
+        pathType: Prefix
