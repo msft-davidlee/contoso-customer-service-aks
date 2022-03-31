@@ -47,7 +47,7 @@ After that, in the App Configuration, you will need to configure the follow to e
 2. To watch for running pods, run the following command ``` kubectl get pods -o=name --field-selector=status.phase=Running -n myapps --watch ```
 3. To observe the HPA in action, run ``` kubectl describe hpa -n myapps ``` For a simple version, run ``` kubectl get hpa -n myapps ```
 4. You can also review the insights view of your AKS cluster as well as Storage insights for how the "db" is handling your load.
-5. When you navigate to https://demo.contoso.com/prometheus, you will be able to redirect to Prometheus to view the requests. Try the following command to see the load: ``` rate(nginx_ingress_controller_requests[1m]) ``
+5. When you navigate to https://demo.contoso.com/prometheus/graph, you will be able to redirect to Prometheus to view the requests. Try the following command to see the load: ``` rate(nginx_ingress_controller_requests[1m]) ```
 
 # Troubleshooting
 1. NSG applied on your AKS Subnet may be impacting access to the site. Be sure to open both ports 80 and 443.
