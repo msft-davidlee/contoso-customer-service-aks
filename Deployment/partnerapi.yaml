@@ -93,9 +93,8 @@ spec:
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-    name: partnerapi-scaledobject    
-    labels:
-        deploymentName: partnerapi
+    name: partnerapi-scaledobject
+    namespace: $NAMESPACE
 spec:
     scaleTargetRef:
         name: partnerapi
