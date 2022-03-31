@@ -66,7 +66,21 @@ if ($LastExitCode -ne 0) {
 # Deploy specfic version of SQL script
 $sqlFile = "Migrations-$version.sql"
 az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern $sqlFile
+
+$ip = Invoke-RestMethod "https://api.ipify.org"
+
+az sql server firewall-rule create -g $AKS_RESOURCE_GROUP -s $SqlServer -n "cicd" --start-ip-address $ip --end-ip-address $ip
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to add firewall exception for cicd."
+}
+
 Invoke-Sqlcmd -InputFile $sqlFile -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $sqlPassword
+
+az sql server firewall-rule delete -g $AKS_RESOURCE_GROUP -s $SqlServer -n "cicd"
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to remove firewall exception for cicd."
+}
+
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
