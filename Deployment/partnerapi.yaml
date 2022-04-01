@@ -95,17 +95,19 @@ kind: ScaledObject
 metadata:
     name: partnerapi-scaledobject
     namespace: $NAMESPACE
+    labels:
+        deploymentName: partnerapi    
 spec:
     scaleTargetRef:
         name: partnerapi
-    pollingInterval: 30
+    pollingInterval: 15
     cooldownPeriod:  300
     minReplicaCount: 1
-    maxReplicaCount: 20
+    maxReplicaCount: 100
     triggers:
     - type: prometheus
       metadata:
         serverAddress: http://prometheus-server.$NAMESPACE.svc.cluster.local:9090
         metricName: access_frequency
-        threshold: '100'
+        threshold: '10'
         query: sum(rate(nginx_ingress_controller_requests[1m]))
