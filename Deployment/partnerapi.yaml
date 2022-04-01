@@ -100,7 +100,7 @@ metadata:
 spec:
     scaleTargetRef:
         name: partnerapi
-    pollingInterval: 15
+    pollingInterval: 30
     cooldownPeriod:  300
     minReplicaCount: 1
     maxReplicaCount: 100
