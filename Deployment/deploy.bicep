@@ -44,6 +44,16 @@ resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = if (queueType == '
   }
   properties: {
     supportsHttpsTrafficOnly: true
+    allowBlobPublicAccess: false
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          id: subnetId
+          action: 'Allow'
+        }
+      ]
+    }
   }
 }
 
@@ -117,6 +127,7 @@ resource kv 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
 module sql './sql.bicep' = {
   name: 'deploy-${appEnvironment}-${version}-sql'
   params: {
+    subnetId: subnetId
     stackName: stackName
     sqlPassword: kv.getSecret('contoso-customer-service-sql-password')
     tags: tags
@@ -206,6 +217,15 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   properties: {
     supportsHttpsTrafficOnly: true
     allowBlobPublicAccess: false
+    networkAcls: {
+      defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          id: subnetId
+          action: 'Allow'
+        }
+      ]
+    }
   }
   tags: tags
 }

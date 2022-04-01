@@ -93,20 +93,22 @@ spec:
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-    name: partnerapi-scaledobject    
+    name: partnerapi-scaledobject
+    namespace: $NAMESPACE
     labels:
-        deploymentName: partnerapi
+        deploymentName: partnerapi    
 spec:
     scaleTargetRef:
         name: partnerapi
     pollingInterval: 30
     cooldownPeriod:  300
     minReplicaCount: 1
-    maxReplicaCount: 20
+    maxReplicaCount: 100
     triggers:
     - type: prometheus
       metadata:
         serverAddress: http://prometheus-server.$NAMESPACE.svc.cluster.local:9090
-        metricName: access_frequency
+        metricName: http_requests_total
         threshold: '100'
-        query: sum(rate(nginx_ingress_controller_requests[1m]))
+        query: sum(rate(nginx_ingress_controller_requests{service='partnerapi'}[1m]))
+        namespace: $NAMESPACE

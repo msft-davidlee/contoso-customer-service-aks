@@ -1,5 +1,6 @@
 param location string
 param stackName string
+param subnetId string
 param tags object
 @secure()
 param sqlPassword string
@@ -15,7 +16,7 @@ resource sql 'Microsoft.Sql/servers@2021-02-01-preview' = {
     administratorLoginPassword: sqlPassword
     version: '12.0'
     minimalTlsVersion: '1.2'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Enabled'    
   }
 }
 
@@ -35,12 +36,12 @@ resource db 'Microsoft.Sql/servers/databases@2021-02-01-preview' = {
   }
 }
 
-resource sqlfw 'Microsoft.Sql/servers/firewallRules@2021-02-01-preview' = {
+resource sqlfw 'Microsoft.Sql/servers/virtualNetworkRules@2021-08-01-preview' = {
   parent: sql
-  name: 'AllowAllMicrosoftAzureIps'
+  name: 'AllowAKSSubnet'
   properties: {
-    endIpAddress: '0.0.0.0'
-    startIpAddress: '0.0.0.0'
+    ignoreMissingVnetServiceEndpoint: false
+    virtualNetworkSubnetId: subnetId
   }
 }
 

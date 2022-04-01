@@ -55,7 +55,7 @@ $strs = GetResource -stackName shared-storage -stackEnvironment prod
 $BuildAccountName = $strs.name
 
 # The version here can be configurable so we can also pull dev specific packages.
-$version = "v4.6"
+$version = "v4.7"
 
 az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern *$version*.zip
 if ($LastExitCode -ne 0) {
@@ -66,7 +66,20 @@ if ($LastExitCode -ne 0) {
 # Deploy specfic version of SQL script
 $sqlFile = "Migrations-$version.sql"
 az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern $sqlFile
+
+$ip = Invoke-RestMethod "https://api.ipify.org"
+
+az sql server firewall-rule create -g $AKS_RESOURCE_GROUP -s $AKS_NAME -n "cicd" --start-ip-address $ip --end-ip-address $ip
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to add firewall exception for cicd."
+}
+
 Invoke-Sqlcmd -InputFile $sqlFile -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $sqlPassword
+
+az sql server firewall-rule delete -g $AKS_RESOURCE_GROUP -s $AKS_NAME -n "cicd"
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to remove firewall exception for cicd."
+}
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
@@ -120,6 +133,7 @@ if (!$testSecret) {
 }
     
 # Step 4c. Install ingress controller
+# See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     --set controller.replicaCount=2 `
     --set controller.metrics.enabled=true `
@@ -157,9 +171,6 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 5: Setup configuration for resources
-# $dbConnectionString = "Server=tcp:$SqlServer,1433;Initial Catalog=$DbName;Persist Security Info=False;User ID=$SqlUsername;Password=$SqlPassword;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
-# See: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-dotfiles-in-a-secret-volume
-# $base64DbConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($dbConnectionString))
 
 if ($QueueType -eq "ServiceBus") { 
     $imageName = "contoso-demo-service-bus-shipping-func:$version"
@@ -171,12 +182,12 @@ if ($QueueType -eq "ServiceBus") {
     }
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
 
-    $ListenerQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
+    $QueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
         --namespace-name $AKS_NAME --name Listener --query primaryConnectionString | ConvertFrom-Json
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable get service bus listener connection string."
     }
-    $QueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($ListenerQueueConnectionString))
+    $ListenerQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($QueueConnectionString))
 }
 
 if ($QueueType -eq "Storage") {
@@ -205,13 +216,20 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step: 5c: Configure Prometheus
+$content = Get-Content .\Deployment\prometheus\kustomization.yaml
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\Deployment\prometheus\kustomization.yaml" -Value $content
+
+$content = Get-Content .\Deployment\prometheus\prometheus.yaml
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\Deployment\prometheus\prometheus.yaml" -Value $content
+
 kubectl apply --kustomize Deployment/prometheus -n $namespace
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to apply prometheus directory."
 }
 
 # Step 6: Deploy customer service app.
-
 $backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendStorageName | ConvertFrom-Json)[0].value
 $backendConn = "DefaultEndpointsProtocol=https;AccountName=$BackendStorageName;AccountKey=$backendKey;EndpointSuffix=core.windows.net"
 
@@ -260,6 +278,7 @@ $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$NAMESPACE', $namespace)
 
 $content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
 $content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
