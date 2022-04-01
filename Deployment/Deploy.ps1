@@ -133,6 +133,7 @@ if (!$testSecret) {
 }
     
 # Step 4c. Install ingress controller
+# See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     --set controller.replicaCount=2 `
     --set controller.metrics.enabled=true `
