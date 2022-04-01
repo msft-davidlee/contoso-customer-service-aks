@@ -216,6 +216,14 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step: 5c: Configure Prometheus
+$content = Get-Content .\Deployment\prometheus\kustomization.yaml
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\Deployment\prometheus\kustomization.yaml" -Value $content
+
+$content = Get-Content .\Deployment\prometheus\prometheus.yaml
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\Deployment\prometheus\prometheus.yaml" -Value $content
+
 kubectl apply --kustomize Deployment/prometheus -n $namespace
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to apply prometheus directory."
