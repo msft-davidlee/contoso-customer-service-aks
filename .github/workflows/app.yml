@@ -113,6 +113,7 @@ jobs:
 
   deploy_db:
     name: Deploy database
+    needs:    
       - setup
       - cd_deploy
     runs-on: windows-latest
