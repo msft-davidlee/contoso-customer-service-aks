@@ -85,7 +85,9 @@ jobs:
 
   deploy_apps:
     name: Deploy apps
-    needs: cd_deploy
+    needs:
+      - setup
+      - cd_deploy
     runs-on: windows-latest
     environment: dev
     steps:
@@ -111,7 +113,8 @@ jobs:
 
   deploy_db:
     name: Deploy database
-    needs: cd_deploy
+      - setup
+      - cd_deploy
     runs-on: windows-latest
     environment: dev
     steps:
