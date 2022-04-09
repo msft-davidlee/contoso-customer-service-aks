@@ -130,7 +130,7 @@ jobs:
         name: Resolve SQL connection string
         working-directory: .\deployment
         run: |
-          .\ResolveSqlConnection.ps1
+          .\ResolveSqlConnection.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
 
       - id: deploy_db
         name: Deploy database

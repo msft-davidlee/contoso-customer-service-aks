@@ -1,6 +1,6 @@
 param(
-    [string]$BUILD_ENV,
-    [string]$Prefix)
+    [Parameter(Mandatory = $true)][string]$BUILD_ENV,
+    [Parameter(Mandatory = $true)][string]$Prefix)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)

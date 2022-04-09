@@ -28,7 +28,7 @@ $ErrorActionPreference = "Stop"
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
-$all = GetResource -stackName aks -stackEnvironment $BUILD_ENV,
+$all = GetResource -stackName contoso-customer-service-aks -stackEnvironment $BUILD_ENV,
 $aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClusters' }
 $AKS_RESOURCE_GROUP = $aks.resourceGroup
 $AKS_NAME = $aks.name
