@@ -3,9 +3,10 @@ param appEnvironment string
 param branch string
 param version string
 param serviceIP string
+param stackNameTag string
 
 var tags = {
-  'stack-name': 'contoso-customer-service-aks'
+  'stack-name': stackNameTag
   'stack-environment': appEnvironment
   'stack-version': version
   'stack-branch': branch

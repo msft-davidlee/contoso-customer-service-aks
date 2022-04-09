@@ -13,10 +13,11 @@ param lastUpdated string = utcNow('u')
 param nodesResourceGroup string
 param backendFuncStorageSuffix string
 param storageQueueSuffix string
+param stackNameTag string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
-  'stack-name': 'contoso-customer-service-aks'
+  'stack-name': stackNameTag
   'stack-environment': appEnvironment
   'stack-branch': branch
   'stack-version': version

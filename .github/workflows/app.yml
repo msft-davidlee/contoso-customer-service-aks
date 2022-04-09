@@ -11,6 +11,7 @@ env:
   APP_VERSION: '5.0-dev'
   BACKEND_FUNC_STORAGE_SUFFIX: 'backendapp'
   STORAGE_QUEUE_SUFFIX: 'db'
+  STACK_NAME_TAG: 'contoso-customer-service-aks'
 
 jobs:
   setup:
@@ -78,6 +79,7 @@ jobs:
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
             backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             storageQueueSuffix=${{ env.STORAGE_QUEUE_SUFFIX }}
+            stackNameTag=${{ env.STACK_NAME_TAG }}
     outputs:
       managedIdentityId: ${{ steps.deploy.outputs.managedIdentityId }}
       queueName: ${{ steps.deploy.outputs.queueName }}
@@ -109,7 +111,8 @@ jobs:
           -APP_VERSION ${{ env.APP_VERSION }} `
           -AKSMSIId ${{ needs.cd_deploy.outputs.managedIdentityId }} `
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
-          -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }}
+          -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
+          -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }}
 
   deploy_db:
     name: Deploy database
@@ -131,7 +134,7 @@ jobs:
         name: Resolve SQL connection string
         working-directory: .\deployment
         run: |
-          .\ResolveSqlConnection.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
+          .\ResolveSqlConnection.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }} -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }}
 
       - id: deploy_db
         name: Deploy database

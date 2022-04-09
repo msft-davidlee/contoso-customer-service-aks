@@ -1,4 +1,4 @@
-param([string]$BUILD_ENV, [string]$APP_VERSION)
+param([string]$BUILD_ENV, [string]$APP_VERSION, [string]$StackNameTag)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -18,7 +18,7 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
 }
 $ErrorActionPreference = "Stop"
 
-$all = GetResource -stackName aks -stackEnvironment $BUILD_ENV
+$all = GetResource -stackName $StackNameTag -stackEnvironment $BUILD_ENV
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
 $SqlServer = $sqlSv.fullyQualifiedDomainName
