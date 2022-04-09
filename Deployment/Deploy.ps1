@@ -389,8 +389,8 @@ $content = $content.Replace('$AADSCOPES', $AAD_SCOPES)
 $content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
 $content = $content.Replace('$VERSION', $APP_VERSION)
 
-Set-Content -Path ".\customerservice.yaml" -Value $content
-kubectl apply -f ".\customerservice.yaml" --namespace $namespace
+Set-Content -Path ".\memberportal.yaml" -Value $content
+kubectl apply -f ".\memberportal.yaml" --namespace $namespace
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy customer service app."
 }
