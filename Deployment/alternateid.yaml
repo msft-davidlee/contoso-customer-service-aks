@@ -66,7 +66,9 @@ spec:
         - name: AzureAd__ClientId
           value: $AADCLIENTID
         - name: AzureAd__Audience
-          value: $AADAUDIENCE         
+          value: $AADAUDIENCE
+        - name: AppInsightsInstrumentationKey
+          value: $APPINSIGHTSKEY
 ---
 apiVersion: v1
 kind: Service

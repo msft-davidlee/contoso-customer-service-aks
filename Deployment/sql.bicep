@@ -36,7 +36,17 @@ resource db 'Microsoft.Sql/servers/databases@2021-02-01-preview' = {
   }
 }
 
-resource sqlfw 'Microsoft.Sql/servers/virtualNetworkRules@2021-08-01-preview' = {
+// Per documentation: Use value '0.0.0.0' for all Azure-internal IP addresses.
+resource allowAllAzureServices 'Microsoft.Sql/servers/firewallRules@2021-08-01-preview' = {
+  name: 'AllowAzureServices'
+  parent: sql
+  properties: {
+    endIpAddress: '0.0.0.0'
+    startIpAddress: '0.0.0.0'
+  }
+}
+
+resource sqlFirewall 'Microsoft.Sql/servers/virtualNetworkRules@2021-08-01-preview' = {
   parent: sql
   name: 'AllowAKSSubnet'
   properties: {

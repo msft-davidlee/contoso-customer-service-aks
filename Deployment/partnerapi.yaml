@@ -57,6 +57,8 @@ spec:
             path: /health
             port: 80              
         env:
+        - name: AppInsightsInstrumentationKey
+          value: $APPINSIGHTSKEY        
         - name: DbSource
           value: $DBSOURCE
         - name: DbName

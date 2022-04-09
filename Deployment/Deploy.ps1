@@ -1,19 +1,11 @@
 param(
-    [Parameter(Mandatory = $true)][string]$AKS_RESOURCE_GROUP,    
-    [Parameter(Mandatory = $true)][string]$AKS_NAME,    
     [Parameter(Mandatory = $true)][string]$BUILD_ENV,
-    [Parameter(Mandatory = $true)][string]$DbName,
-    [Parameter(Mandatory = $true)][string]$SqlServer,
-    [Parameter(Mandatory = $true)][string]$SqlUsername,
-    [Parameter(Mandatory = $true)][string]$Backend,
+    [Parameter(Mandatory = $true)][string]$QueueName,
     [Parameter(Mandatory = $true)][string]$QueueType,
     [Parameter(Mandatory = $true)][string]$AKSMSIId,
-    [Parameter(Mandatory = $true)][string]$KeyVaultName,
-    [Parameter(Mandatory = $true)][string]$TenantId,
-    [Parameter(Mandatory = $true)][string]$QueueStorageName,
-    [Parameter(Mandatory = $true)][string]$BackendStorageName,
-    [Parameter(Mandatory = $true)][string]$QueueName,
-    [Parameter(Mandatory = $true)][bool]$EnableFrontdoor)
+    [Parameter(Mandatory = $true)][string]$APP_VERSION,
+    [Parameter(Mandatory = $true)][string]$BACKEND_FUNC_STORAGE_SUFFIX,
+    [Parameter(Mandatory = $true)][string]$STORAGE_QUEUE_SUFFIX)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -36,49 +28,38 @@ $ErrorActionPreference = "Stop"
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
+$all = GetResource -stackName aks -stackEnvironment $BUILD_ENV,
+$aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClusters' }
+$AKS_RESOURCE_GROUP = $aks.resourceGroup
+$AKS_NAME = $aks.name
+
+$sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
+$sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
+$SqlServer = $sqlSv.fullyQualifiedDomainName
+$SqlUsername = $sqlSv.administratorLogin
+
+$db = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers/databases' }
+$dbNameParts = $db.name.Split('/')
+$DbName = $dbNameParts[1]
 
 $kv = GetResource -stackName shared-key-vault -stackEnvironment prod
-$kvName = $kv.name
-$sqlPassword = (az keyvault secret show -n contoso-customer-service-sql-password --vault-name $kvName --query value | ConvertFrom-Json)
+$KeyVaultName = $kv.name
 
-$AAD_INSTANCE = (az keyvault secret show -n contoso-customer-service-aad-instance --vault-name $kvName --query value | ConvertFrom-Json)
-$AAD_DOMAIN = (az keyvault secret show -n contoso-customer-service-aad-domain --vault-name $kvName --query value | ConvertFrom-Json)
-$AAD_TENANT_ID = (az keyvault secret show -n contoso-customer-service-aad-tenant-id --vault-name $kvName --query value | ConvertFrom-Json)
-$AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-client-id --vault-name $kvName --query value | ConvertFrom-Json)
-$AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-client-secret --vault-name $kvName --query value | ConvertFrom-Json)
-$AAD_AUDIENCE = (az keyvault secret show -n contoso-customer-service-aad-app-audience --vault-name $kvName --query value | ConvertFrom-Json)
-$AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --vault-name $kvName --query value | ConvertFrom-Json)
+$AAD_INSTANCE = (az keyvault secret show -n contoso-customer-service-aad-instance --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_DOMAIN = (az keyvault secret show -n contoso-customer-service-aad-domain --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_TENANT_ID = (az keyvault secret show -n contoso-customer-service-aad-tenant-id --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-client-id --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-client-secret --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_AUDIENCE = (az keyvault secret show -n contoso-customer-service-aad-app-audience --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $acr = GetResource -stackName shared-container-registry -stackEnvironment prod
 $acrName = $acr.Name
 
-$strs = GetResource -stackName shared-storage -stackEnvironment prod
-$BuildAccountName = $strs.name
-
-# The version here can be configurable so we can also pull dev specific packages.
-$version = "v4.7"
-
-az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern *$version*.zip
+$log = $all | Where-Object { $_.type -eq 'microsoft.insights/components' }
+az extension add --name application-insights
+$appInsightsKey = az monitor app-insights component show --app $log.name -g $log.resourceGroup --query "instrumentationKey" -o tsv
 if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to download files."
-}
-
-# Step 1: Deploy DB.
-# Deploy specfic version of SQL script
-$sqlFile = "Migrations-$version.sql"
-az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern $sqlFile
-
-$ip = Invoke-RestMethod "https://api.ipify.org"
-
-az sql server firewall-rule create -g $AKS_RESOURCE_GROUP -s $AKS_NAME -n "cicd" --start-ip-address $ip --end-ip-address $ip
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to add firewall exception for cicd."
-}
-
-Invoke-Sqlcmd -InputFile $sqlFile -ServerInstance $SqlServer -Database $DbName -Username $SqlUsername -Password $sqlPassword
-
-az sql server firewall-rule delete -g $AKS_RESOURCE_GROUP -s $AKS_NAME -n "cicd"
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to remove firewall exception for cicd."
+    throw "An error has occured. Unable get app insights instrumentation key."
 }
 
 # Step 2: Login to AKS.
@@ -142,12 +123,12 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
 
 helm install keda kedacore/keda -n $namespace
 
-if ($EnableFrontdoor) {
-    $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
-}
-else {
-    $content = Get-Content .\Deployment\external-ingress.yaml    
-}
+# if ($EnableFrontdoor) {
+#     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
+# }
+# else {
+$content = Get-Content .\Deployment\external-ingress.yaml    
+#}
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
 $content = $content.Replace('$NAMESPACE', $namespace)
@@ -173,9 +154,13 @@ if ($LastExitCode -ne 0) {
 # Step 5: Setup configuration for resources
 
 if ($QueueType -eq "ServiceBus") { 
-    $imageName = "contoso-demo-service-bus-shipping-func:$version"
+    $imageName = "contoso-demo-service-bus-shipping-func:$APP_VERSION)"
+
+    $sb = $all | Where-Object { $_.type -eq 'Microsoft.ServiceBus/namespaces' }
+    $ServiceBusName = $sb.name
+
     $SenderQueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
-        --namespace-name $AKS_NAME --name Sender --query primaryConnectionString | ConvertFrom-Json    
+        --namespace-name $ServiceBusName --name Sender --query primaryConnectionString | ConvertFrom-Json    
     
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable get service bus connection string."
@@ -183,7 +168,7 @@ if ($QueueType -eq "ServiceBus") {
     $SenderQueueConnectionString = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($SenderQueueConnectionString))
 
     $QueueConnectionString = az servicebus namespace authorization-rule keys list --resource-group $AKS_RESOURCE_GROUP `
-        --namespace-name $AKS_NAME --name Listener --query primaryConnectionString | ConvertFrom-Json
+        --namespace-name $ServiceBusName --name Listener --query primaryConnectionString | ConvertFrom-Json
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable get service bus listener connection string."
     }
@@ -191,7 +176,14 @@ if ($QueueType -eq "ServiceBus") {
 }
 
 if ($QueueType -eq "Storage") {
-    $imageName = "contoso-demo-storage-queue-func:$version"
+
+    $storage = $all | Where-Object { $_.type -eq 'Microsoft.Storage/storageAccounts' -and $_.name.EndsWith($STORAGE_QUEUE_SUFFIX) }
+    if (!$storage) {
+        throw "Unable to locate storage queue account name."
+    }
+    $QueueStorageName = $storage.name
+
+    $imageName = "contoso-demo-storage-queue-func:$APP_VERSION)"
     $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $QueueStorageName | ConvertFrom-Json)[0].value
 
     if ($LastExitCode -ne 0) {
@@ -206,6 +198,11 @@ if ($QueueType -eq "Storage") {
 $content = Get-Content .\Deployment\azurekeyvault.yaml
 $content = $content.Replace('$MANAGEDID', $AKSMSIId)
 $content = $content.Replace('$KEYVAULTNAME', $KeyVaultName)
+
+$TenantId = az account show --query "tenantId" -o tsv
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable get tenant Id."
+}
 $content = $content.Replace('$TENANTID', $TenantId)
 
 Set-Content -Path ".\azurekeyvault.yaml" -Value $content
@@ -230,6 +227,13 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 6: Deploy customer service app.
+
+$storage = $all | Where-Object { $_.type -eq 'Microsoft.Storage/storageAccounts' -and $_.name.EndsWith($BACKEND_FUNC_STORAGE_SUFFIX) }
+if (!$storage) {
+    throw "Unable to locate backend func storage account name."
+}
+$BackendStorageName = $storage.name
+
 $backendKey = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $BackendStorageName | ConvertFrom-Json)[0].value
 $backendConn = "DefaultEndpointsProtocol=https;AccountName=$BackendStorageName;AccountKey=$backendKey;EndpointSuffix=core.windows.net"
 
@@ -242,6 +246,7 @@ $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$AZURE_STORAGE_CONNECTION', $backendConn)
 $content = $content.Replace('$AZURE_STORAGEQUEUE_CONNECTION', $QueueConnectionString)
 $content = $content.Replace('$QUEUENAME', $QueueName)
+$content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
 
 Set-Content -Path ".\backendservice.yaml" -Value $content
 kubectl apply -f ".\backendservice.yaml" --namespace $namespace
@@ -263,8 +268,8 @@ $content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
 $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
 $content = $content.Replace('$AADSCOPES', $AAD_SCOPES)
-
-$content = $content.Replace('$VERSION', $version)
+$content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
+$content = $content.Replace('$VERSION', $APP_VERSION)
 
 Set-Content -Path ".\customerservice.yaml" -Value $content
 kubectl apply -f ".\customerservice.yaml" --namespace $namespace
@@ -285,8 +290,8 @@ $content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
 $content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
 $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADAUDIENCE', $AAD_AUDIENCE)
-
-$content = $content.Replace('$VERSION', $version)
+$content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
+$content = $content.Replace('$VERSION', $APP_VERSION)
 
 Set-Content -Path ".\alternateid.yaml" -Value $content
 kubectl apply -f ".\alternateid.yaml" --namespace $namespace
@@ -304,8 +309,8 @@ $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$SHIPPINGREPOSITORYTYPE', $QueueType)
-
-$content = $content.Replace('$VERSION', $version)
+$content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
+$content = $content.Replace('$VERSION', $APP_VERSION)
 
 Set-Content -Path ".\partnerapi.yaml" -Value $content
 kubectl apply -f ".\partnerapi.yaml" --namespace $namespace
@@ -327,8 +332,8 @@ $content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
 $content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
 $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADAUDIENCE', $AAD_AUDIENCE)
-
-$content = $content.Replace('$VERSION', $version)
+$content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
+$content = $content.Replace('$VERSION', $APP_VERSION)
 
 Set-Content -Path ".\memberservice.yaml" -Value $content
 kubectl apply -f ".\memberservice.yaml" --namespace $namespace
@@ -349,8 +354,8 @@ $content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
 $content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
 $content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
 $content = $content.Replace('$AADAUDIENCE', $AAD_AUDIENCE)
-
-$content = $content.Replace('$VERSION', $version)
+$content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
+$content = $content.Replace('$VERSION', $APP_VERSION)
 
 Set-Content -Path ".\pointsservice.yaml" -Value $content
 kubectl apply -f ".\pointsservice.yaml" --namespace $namespace
@@ -358,12 +363,44 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy points service app."
 }
 
+# Step 7: Deploy Member Portal
+$AADINSTANCEB2C = (az keyvault secret show -n contoso-customer-service-b2c-instance --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AADDOMAINB2C = (az keyvault secret show -n contoso-customer-service-b2c-domain --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AADCLIENTIDB2C = (az keyvault secret show -n contoso-customer-service-b2c-client-id --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AADPOLICYIDB2C = (az keyvault secret show -n contoso-customer-service-b2c-policy-id --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AADSIGNOUTCALLBACKPATHB2C = (az keyvault secret show -n contoso-customer-service-b2c-sign-out-callback-path --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-memberportal-client-id --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+$AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-memberportal-client-secret --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+
+$content = Get-Content .\Deployment\memberportal.yaml
+$content = $content.Replace('$ACRNAME', $acrName)
+$content = $content.Replace('$NAMESPACE', $namespace)
+$content = $content.Replace('$AADINSTANCEB2C', $AADINSTANCEB2C)
+$content = $content.Replace('$AADDOMAINB2C', $AADDOMAINB2C)
+$content = $content.Replace('$AADCLIENTIDB2C', $AADCLIENTIDB2C)
+$content = $content.Replace('$AADPOLICYIDB2C', $AADPOLICYIDB2C)
+$content = $content.Replace('$AADSIGNOUTCALLBACKPATHB2C', $AADSIGNOUTCALLBACKPATHB2C)
+$content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
+$content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
+$content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
+$content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
+$content = $content.Replace('$AADCLIENTSECRET', $AAD_CLIENT_SECRET)
+$content = $content.Replace('$AADSCOPES', $AAD_SCOPES)
+$content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
+$content = $content.Replace('$VERSION', $APP_VERSION)
+
+Set-Content -Path ".\customerservice.yaml" -Value $content
+kubectl apply -f ".\customerservice.yaml" --namespace $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy customer service app."
+}
+
 # Step 11: Function scaling based on specific scalers
 if ($QueueType -eq "ServiceBus") { 
     $content = Get-Content .\Deployment\backendservicebus.yaml
     $content = $content.Replace('$QUEUENAME', $QueueName)
     $content = $content.Replace('$BASE64CONNECTIONSTRING', $ListenerQueueConnectionString)
-
+    $content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
     Set-Content -Path ".\backendservicebus.yaml" -Value $content
     kubectl apply -f ".\backendservicebus.yaml" --namespace $namespace
     if ($LastExitCode -ne 0) {
@@ -376,7 +413,7 @@ if ($QueueType -eq "Storage") {
     $content = $content.Replace('$QUEUENAME', $QueueName)
     $content = $content.Replace('$BASE64CONNECTIONSTRING', $SenderQueueConnectionString)
     $content = $content.Replace('$STORAGEACCOUNTNAME', $BackendStorageName)
-
+    $content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
     Set-Content -Path ".\backendstorage.yaml" -Value $content
     kubectl apply -f ".\backendstorage.yaml" --namespace $namespace
     if ($LastExitCode -ne 0) {
