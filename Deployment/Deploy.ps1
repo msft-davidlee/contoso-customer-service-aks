@@ -115,6 +115,21 @@ if (!$testSecret) {
         --key .\demo.contoso.com.key `
         --cert .\demo.contoso.com.crt
 
+    kubectl create secret tls aks-csv-tls `
+        --namespace $namespace `
+        --key .\customerservice.contoso.com.key `
+        --cert .\demo.customerservice.com.crt
+
+    kubectl create secret tls aks-api-tls `
+        --namespace $namespace `
+        --key .\api.contoso.com.key `
+        --cert .\api.customerservice.com.crt
+
+    kubectl create secret tls aks-mem-tls `
+        --namespace $namespace `
+        --key .\member.contoso.com.key `
+        --cert .\member.customerservice.com.crt
+
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to set TLS for demo.contoso.com."
     }
