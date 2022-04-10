@@ -15,6 +15,15 @@ spec:
   - hosts:
     - demo.contoso.com
     secretName: aks-ingress-tls
+  - hosts:
+    - customerservice.contoso.com
+    secretName: aks-csv-tls
+  - hosts:
+    - api.contoso.com
+    secretName: aks-api-tls
+  - hosts:
+    - member.contoso.com
+    secretName: aks-csv-tls              
   rules:
   - host: demo.contoso.com
     http:
@@ -26,59 +35,47 @@ spec:
                   number: 9090
         path: /(.*)
         pathType: Prefix
-  - hosts:
-    - customerservice.contoso.com
-    secretName: aks-csv-tls
-    rules:
-    - host: customerservice.contoso.com
-      http:
-        paths:
-        - backend:
-            service:
-              name: customerservice
-              port:
-                number: 80
-          path: /(.*)
-          pathType: Prefix
-  - hosts:
-    - api.contoso.com
-    secretName: aks-api-tls
-    rules:
-    - host: api.contoso.com
-      http:
-        paths:
-        - backend:
-            service:
-              name: memberservice
-              port:
-                number: 80
-          path: /members/(.*)
-          pathType: Prefix
-        - backend:
-            service:
-              name: pointsservice
-              port:
-                number: 80
-          path: /points/(.*)
-          pathType: Prefix
-        - backend:
-            service:
-              name: partnerapi
-              port:
-                number: 80
-          path: /partner/(.*)
-          pathType: Prefix
-  - hosts:
-    - member.contoso.com
-    secretName: aks-csv-tls
-    rules:
-    - host: member.contoso.com
-      http:
-        paths:
-        - backend:
-            service:
-              name: memberportal
-              port:
-                number: 80
-          path: /(.*)
-          pathType: Prefix          
+  - host: api.contoso.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: customerservice
+            port:
+              number: 80
+        path: /(.*)
+        pathType: Prefix
+  - host: customerservice.contoso.com 
+    http:
+      paths:
+      - backend:
+          service:
+            name: memberservice
+            port:
+              number: 80
+        path: /members/(.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: pointsservice
+            port:
+              number: 80
+        path: /points/(.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: partnerapi
+            port:
+              number: 80
+        path: /partner/(.*)
+        pathType: Prefix
+  - host: member.contoso.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: memberportal
+            port:
+              number: 80
+        path: /(.*)
+        pathType: Prefix          
