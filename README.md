@@ -10,7 +10,16 @@ To create this, you will need to follow the steps below.
 1. Fork this git repo. See: https://docs.github.com/en/get-started/quickstart/fork-a-repo
 2. Follow the steps in https://github.com/msft-davidlee/contoso-governance to create the necessary resources via Azure Blueprint.
 3. Create the following secret(s) in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
-4. Create certificate for your solution using the following ``` openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls" ```
+4. Create required certificates for your solution using the following commands:
+``` 
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls"
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out customerservice.contoso.com.crt -keyout customerservice.contoso.com.key -subj "/CN=customerservice.contoso.com/O=aks-ingress-tls"
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out member.contoso.com.crt -keyout member.contoso.com.key -subj "/CN=member.contoso.com/O=aks-ingress-tls"
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out api.contoso.com.crt -keyout api.contoso.com.key -subj "/CN=api.contoso.com/O=aks-ingress-tls"
+```
 5. Next, upload the outputs to a container named certs in your storage account.
 6. Execute the GitHub action workflow. Review the output to ensure the workflow executes with no errors.
 7. Next, you will need to launch CloudShell or Azure CLI on your local machine. If you are using CloudShell, you can clone this repo there and CD into this folder. If you are on your local machine, be sure to do ``` az login ``` before executing the script.
@@ -36,7 +45,7 @@ After that, in the App Configuration, you will need to configure the follow to e
 | Value | true or false |
 
 # Performance Testing
-1. For running a performance test, you can craft a payload against the Order endpoint https://demo.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
+1. For running a performance test, you can craft a payload against the Order endpoint https://api.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
 ```
 {
     "productId": "FFF01",

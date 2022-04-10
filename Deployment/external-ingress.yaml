@@ -35,7 +35,7 @@ spec:
                   number: 9090
         path: /(.*)
         pathType: Prefix
-  - host: api.contoso.com
+  - host: customerservice.contoso.com
     http:
       paths:
       - backend:
@@ -45,7 +45,7 @@ spec:
               number: 80
         path: /(.*)
         pathType: Prefix
-  - host: customerservice.contoso.com 
+  - host: api.contoso.com 
     http:
       paths:
       - backend:
