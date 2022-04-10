@@ -8,7 +8,7 @@ on:
         description: "Environment selector"
         required: false
 env:
-  APP_VERSION: 'v5.0-dev'
+  APP_VERSION: 'v5.1-dev'
   BACKEND_FUNC_STORAGE_SUFFIX: 'backendapp'
   STORAGE_QUEUE_SUFFIX: 'db'
   STACK_NAME_TAG: 'contoso-customer-service-aks'
