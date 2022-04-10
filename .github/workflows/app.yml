@@ -136,9 +136,9 @@ jobs:
         run: |
           .\ResolveSqlConnection.ps1 `
           -APP_VERSION ${{ env.APP_VERSION }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `          
+          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
           -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
-          -TEMPDIR ${{ github.workspace }}
+          -TEMPDIR ${{ env.GITHUB_WORKSPACE }}
 
       - id: deploy_db
         name: Deploy database
