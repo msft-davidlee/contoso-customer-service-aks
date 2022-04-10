@@ -105,6 +105,10 @@ helm repo update
 # Step 4b.
 $testSecret = (kubectl get secret aks-ingress-tls -o json -n $namespace)
 if (!$testSecret) {
+
+    $strs = GetResource -stackName shared-storage -stackEnvironment prod
+    $BuildAccountName = $strs.name
+
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
     kubectl create secret tls aks-ingress-tls `
         --namespace $namespace `

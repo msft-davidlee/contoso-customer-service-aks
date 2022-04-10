@@ -11,7 +11,7 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
         
     $res = ($platformRes | Where-Object { $_.tags.'stack-environment' -eq $stackEnvironment })
     if (!$res) {
-        throw "Unable to find resource by environment!"
+        throw "Unable to find resource $stackName by environment!"
     }
         
     return $res
@@ -28,7 +28,7 @@ $db = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers/databases' }
 $dbNameParts = $db.name.Split('/')
 $DbName = $dbNameParts[1]
 
-$kv = GetResource -stackName shared-key-vault -stackEnvironment $BUILD_ENV
+$kv = GetResource -stackName shared-key-vault -stackEnvironment prod
 $kvName = $kv.name
 
 $sqlPassword = (az keyvault secret show -n contoso-customer-service-sql-password --vault-name $kvName --query value | ConvertFrom-Json)
