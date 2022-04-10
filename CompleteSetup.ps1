@@ -1,4 +1,6 @@
-param($BUILD_ENV)
+param([Parameter(Mandatory = $true)][string]$BUILD_ENV)
+
+$ErrorActionPreference = "Stop"
 
 $groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
 $resourceGroupName = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' -and $_.tags.'stack-environment' -eq $BUILD_ENV }).name

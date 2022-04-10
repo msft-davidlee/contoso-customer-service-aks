@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: customerservice
+  name: memberportal
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: customerservice
+      app: memberportal
   template:
     metadata:
       labels:
-        app: customerservice
+        app: memberportal
     spec:
       volumes:
-      - name: secrets-store-customerservice
+      - name: secrets-store-memberportal
         csi:
           driver: secrets-store.csi.k8s.io
           readOnly: true
           volumeAttributes:
             secretProviderClass: "azure-kvname-podid"
       containers:
-      - name: customerservice
-        image: $ACRNAME.azurecr.io/contoso-demo-website:$VERSION
+      - name: memberportal
+        image: $ACRNAME.azurecr.io/contoso-demo-member-portal:$VERSION
         resources:
           requests:
             cpu: 100m
@@ -32,7 +32,7 @@ spec:
         ports:
         - containerPort: 80
         volumeMounts:
-            - name: secrets-store-customerservice
+            - name: secrets-store-memberportal
               mountPath: "/mnt/secrets-store"
               readOnly: true
         livenessProbe:
@@ -44,37 +44,26 @@ spec:
             path: /health
             port: 80              
         env:
-        - name: DbSource
-          value: $DBSOURCE
-        - name: DbName
-          value: $DBNAME
-        - name: DbUserId
-          value: $DBUSERID
         - name: AppInsightsInstrumentationKey
-          value: $APPINSIGHTSKEY          
-        - name: DbPassword
-          valueFrom:
-            secretKeyRef:
-              name: contoso-customer-service-sql-password
-              key: contoso-customer-service-sql-password
-        - name: AlternateIdServiceUri
-          value: http://alternateid.$NAMESPACE.svc.cluster.local
-        - name: MemberServiceUri
-          value: http://memberservice.$NAMESPACE.svc.cluster.local          
-        - name: PartnerAPIUri
-          value: http://partnerapi.$NAMESPACE.svc.cluster.local
+          value: $APPINSIGHTSKEY        
+        - name: MemberPointsUrl
+          value: http://pointsservice.$NAMESPACE.svc.cluster.local
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
-        - name: EnableAuth
-          value: "true"
-        - name: AzureAd__CallbackPath
-          value: /signin-oidc
+        - name: AzureAdB2C__Instance
+          value: $AADINSTANCEB2C
+        - name: AzureAdB2C__Domain
+          value: $AADDOMAINB2C
+        - name: AzureAdB2C__ClientId
+          value: $AADCLIENTIDB2C
+        - name: AzureAdB2C__SignUpSignInPolicyId
+          value: $AADPOLICYIDB2C
+        - name: AzureAdB2C__SignedOutCallbackPath
+          value: $AADSIGNOUTCALLBACKPATHB2C             
         - name: AzureAd__Instance
           value: $AADINSTANCE
         - name: AzureAd__TenantId
           value: $AADTENANTID
-        - name: AzureAd__Domain
-          value: $AADDOMAIN
         - name: AzureAd__ClientId
           value: $AADCLIENTID
         - name: AzureAd__ClientSecret
@@ -87,24 +76,24 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: customerservice
+  name: memberportal
 spec:
   type: ClusterIP
   ports:
   - port: 80
   selector:
-    app: customerservice
+    app: memberportal
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-    name: customerservice-scaledobject
+    name: memberportal-scaledobject
     namespace: $NAMESPACE
     labels:
-        deploymentName: customerservice    
+        deploymentName: memberportal    
 spec:
     scaleTargetRef:
-        name: customerservice
+        name: memberportal
     pollingInterval: 30
     cooldownPeriod:  300
     minReplicaCount: 1
@@ -115,5 +104,5 @@ spec:
         serverAddress: http://prometheus-server.$NAMESPACE.svc.cluster.local:9090
         metricName: http_requests_total
         threshold: '100'
-        query: sum(rate(nginx_ingress_controller_requests{service='customerservice'}[1m]))
+        query: sum(rate(nginx_ingress_controller_requests{service='memberportal'}[1m]))
         namespace: $NAMESPACE        

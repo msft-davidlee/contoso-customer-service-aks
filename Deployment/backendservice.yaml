@@ -44,6 +44,8 @@ spec:
             value: $DBNAME
           - name: DbUserId
             value: $DBUSERID
+          - name: AppInsightsInstrumentationKey
+            value: $APPINSIGHTSKEY            
           - name: DbPassword
             valueFrom:
               secretKeyRef:

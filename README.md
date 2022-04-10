@@ -10,13 +10,28 @@ To create this, you will need to follow the steps below.
 1. Fork this git repo. See: https://docs.github.com/en/get-started/quickstart/fork-a-repo
 2. Follow the steps in https://github.com/msft-davidlee/contoso-governance to create the necessary resources via Azure Blueprint.
 3. Create the following secret(s) in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
-4. Create certificate for your solution using the following ``` openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls" ```
+4. Create required certificates for your solution using the following commands:
+``` 
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls"
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out customerservice.contoso.com.crt -keyout customerservice.contoso.com.key -subj "/CN=customerservice.contoso.com/O=aks-ingress-tls"
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out member.contoso.com.crt -keyout member.contoso.com.key -subj "/CN=member.contoso.com/O=aks-ingress-tls"
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out api.contoso.com.crt -keyout api.contoso.com.key -subj "/CN=api.contoso.com/O=aks-ingress-tls"
+```
 5. Next, upload the outputs to a container named certs in your storage account.
 6. Execute the GitHub action workflow. Review the output to ensure the workflow executes with no errors.
 7. Next, you will need to launch CloudShell or Azure CLI on your local machine. If you are using CloudShell, you can clone this repo there and CD into this folder. If you are on your local machine, be sure to do ``` az login ``` before executing the script.
 8. You will need to run the CompleteSetup.ps1 script manually. Be sure to pass in BUILD_ENV parameter which can be either dev or prod.
 9. To check if everything is setup successfully, review the script output for any errors.
 10. Update your local host file to point to the public ip.
+
+## Secrets
+| Name | Comments |
+| --- | --- |
+| MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
+| PREFIX | mytodos - or whatever name you would like for all your resources |
 
 ## Deploying Frontdoor
 If you are deploying Frontdoor. Frontdoor by already has its domain name with SSL cert and that's what we will be using. 
@@ -29,14 +44,8 @@ After that, in the App Configuration, you will need to configure the follow to e
 | Label | dev or prod |
 | Value | true or false |
 
-## Secrets
-| Name | Comments |
-| --- | --- |
-| MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
-| PREFIX | mytodos - or whatever name you would like for all your resources |
-
 # Performance Testing
-1. For running a performance test, you can craft a payload against the Order endpoint https://demo.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
+1. For running a performance test, you can craft a payload against the Order endpoint https://api.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
 ```
 {
     "productId": "FFF01",
@@ -47,7 +56,7 @@ After that, in the App Configuration, you will need to configure the follow to e
 2. To watch for running pods, run the following command ``` kubectl get pods -o=name --field-selector=status.phase=Running -n myapps --watch ```
 3. To observe the HPA in action, run ``` kubectl describe hpa -n myapps ``` For a simple version, run ``` kubectl get hpa -n myapps ```
 4. You can also review the insights view of your AKS cluster as well as Storage insights for how the "db" is handling your load.
-5. When you navigate to https://demo.contoso.com/prometheus/graph, you will be able to redirect to Prometheus to view the requests. Try the following command to see the load: ``` nginx_ingress_controller_requests ```
+5. When you navigate to https://demo.contoso.com, you will be able to redirect to Prometheus to view the requests. Try the following command to see the load: ``` nginx_ingress_controller_requests ```
 6. Next try the following to look at request per service such as customer service. ``` sum(rate(nginx_ingress_controller_requests{service='customerservice'}[1m])) ```
 
 # Troubleshooting

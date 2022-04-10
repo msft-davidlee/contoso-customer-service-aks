@@ -11,10 +11,13 @@ param queueType string
 param version string
 param lastUpdated string = utcNow('u')
 param nodesResourceGroup string
+param backendFuncStorageSuffix string
+param storageQueueSuffix string
+param stackNameTag string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
-  'stack-name': 'contoso-customer-service-aks'
+  'stack-name': stackNameTag
   'stack-environment': appEnvironment
   'stack-branch': branch
   'stack-version': version
@@ -35,7 +38,7 @@ resource appinsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = if (queueType == 'Storage') {
-  name: stackName
+  name: '${stackName}${storageQueueSuffix}'
   location: location
   tags: tags
   kind: 'StorageV2'
@@ -114,8 +117,6 @@ resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-06-01-preview' = 
     enableExpress: false
   }
 }
-
-var sqlUsername = 'app'
 
 //https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/key-vault-parameter?tabs=azure-cli#use-getsecret-function
 
@@ -199,16 +200,10 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
   }
 }
 
-output aksName string = aks.name
-output sqlserver string = sql.outputs.sqlFqdn
-output sqlusername string = sqlUsername
-output dbname string = sql.outputs.dbName
-output tenantId string = subscription().tenantId
 output managedIdentityId string = aks.properties.addonProfiles.azureKeyvaultSecretsProvider.identity.clientId
 
-var backendapp = '${stackName}backendapp'
 resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
-  name: backendapp
+  name: '${stackName}${backendFuncStorageSuffix}'
   location: location
   sku: {
     name: 'Standard_LRS'
@@ -231,8 +226,3 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
 }
 
 output queueName string = queueName
-output queueStorageName string = str.name
-output backendappStorageName string = backendappStr.name
-output backend string = backendapp
-output aadinstance string = environment().authentication.loginEndpoint
-output stackname string = stackName
