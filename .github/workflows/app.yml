@@ -138,7 +138,7 @@ jobs:
           -APP_VERSION ${{ env.APP_VERSION }} `
           -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
           -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
-          -TEMPDIR ${{ env.GITHUB_WORKSPACE }}
+          -TEMPDIR ${{ github.workspace }}
 
       - id: deploy_db
         name: Deploy database
