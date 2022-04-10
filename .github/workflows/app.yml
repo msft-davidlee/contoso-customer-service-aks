@@ -136,8 +136,7 @@ jobs:
         run: |
           .\ResolveSqlConnection.ps1 `
           -APP_VERSION ${{ env.APP_VERSION }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
-          -Prefix ${{ secrets.PREFIX }} `
+          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `          
           -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
           -TEMPDIR ${{ github.workspace }}
 
