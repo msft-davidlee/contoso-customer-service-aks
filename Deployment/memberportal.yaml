@@ -34,7 +34,15 @@ spec:
         volumeMounts:
             - name: secrets-store-memberportal
               mountPath: "/mnt/secrets-store"
-              readOnly: true           
+              readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80              
         env:
         - name: AppInsightsInstrumentationKey
           value: $APPINSIGHTSKEY        
