@@ -1,4 +1,8 @@
-param([string]$BUILD_ENV, [string]$APP_VERSION, [string]$StackNameTag)
+param(
+    [Parameter(Mandatory = $true)][string]$BUILD_ENV, 
+    [Parameter(Mandatory = $true)][string]$APP_VERSION, 
+    [Parameter(Mandatory = $true)][string]$StackNameTag,
+    [Parameter(Mandatory = $true)][string]$TEMPDIR)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -41,14 +45,14 @@ $BuildAccountName = $strs.name
 
 $sqlFile = "Migrations-$APP_VERSION.sql"
 $dacpac = "cch-$APP_VERSION.dacpac"
-az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern $sqlFile
+az storage blob download-batch --destination $TEMPDIR -s apps --account-name $BuildAccountName --pattern $sqlFile
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to download sql file."
 }
-Write-Host "::set-output name=sqlFile::$sqlFile"
+Write-Host "::set-output name=sqlFile::$TEMPDIR\$sqlFile"
 
-az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern $dacpac
+az storage blob download-batch --destination $TEMPDIR -s apps --account-name $BuildAccountName --pattern $dacpac
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to download dacpac file."
 }
-Write-Host "::set-output name=dacpac::$dacpac"
+Write-Host "::set-output name=dacpac::$TEMPDIR\$dacpac"
