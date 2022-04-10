@@ -45,7 +45,10 @@ az storage blob download-batch --destination . -s apps --account-name $BuildAcco
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to download sql file."
 }
+Write-Host "::set-output name=sqlFile::$sqlFile"
+
 az storage blob download-batch --destination . -s apps --account-name $BuildAccountName --pattern $dacpac
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to download dacpac file."
 }
+Write-Host "::set-output name=dacpac::$dacpac"
