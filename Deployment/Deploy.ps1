@@ -176,7 +176,7 @@ if ($LastExitCode -ne 0) {
 # Step 5: Setup configuration for resources
 
 if ($QueueType -eq "ServiceBus") { 
-    $imageName = "contoso-demo-service-bus-shipping-func:$APP_VERSION)"
+    $imageName = "contoso-demo-service-bus-shipping-func:$APP_VERSION"
 
     $sb = $all | Where-Object { $_.type -eq 'Microsoft.ServiceBus/namespaces' }
     $ServiceBusName = $sb.name
@@ -205,7 +205,7 @@ if ($QueueType -eq "Storage") {
     }
     $QueueStorageName = $storage.name
 
-    $imageName = "contoso-demo-storage-queue-func:$APP_VERSION)"
+    $imageName = "contoso-demo-storage-queue-func:$APP_VERSION"
     $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $QueueStorageName | ConvertFrom-Json)[0].value
 
     if ($LastExitCode -ne 0) {
