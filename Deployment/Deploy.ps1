@@ -169,7 +169,7 @@ if ($LastExitCode -ne 0) {
         }
     }
     else {
-        throw "An error has occured. Unable to deploy external ingress."
+        throw "An error has occured. Unable to deploy external ingress. $errorMsg "
     }    
 }
 
