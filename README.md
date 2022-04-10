@@ -18,6 +18,12 @@ To create this, you will need to follow the steps below.
 9. To check if everything is setup successfully, review the script output for any errors.
 10. Update your local host file to point to the public ip.
 
+## Secrets
+| Name | Comments |
+| --- | --- |
+| MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
+| PREFIX | mytodos - or whatever name you would like for all your resources |
+
 ## Deploying Frontdoor
 If you are deploying Frontdoor. Frontdoor by already has its domain name with SSL cert and that's what we will be using. 
 
@@ -28,12 +34,6 @@ After that, in the App Configuration, you will need to configure the follow to e
 | Key | contoso-customer-service-app-service/deployment-flags/enable-frontdoor |
 | Label | dev or prod |
 | Value | true or false |
-
-## Secrets
-| Name | Comments |
-| --- | --- |
-| MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
-| PREFIX | mytodos - or whatever name you would like for all your resources |
 
 # Performance Testing
 1. For running a performance test, you can craft a payload against the Order endpoint https://demo.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
