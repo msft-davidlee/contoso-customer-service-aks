@@ -141,14 +141,14 @@ jobs:
         uses: azure/sql-action@v1.2
         with:
           connection-string: ${{ steps.resolve-sql-connectionstring.outputs.sqlConnectionString }}
-          dacpac-package: "./Db/cch.dacpac"
+          dacpac-package: "cch.dacpac"
 
       - id: add_mock_data
         name: Add mock data in database
         uses: azure/sql-action@v1.2
         with:
           connection-string: ${{ steps.resolve-sql-connectionstring.outputs.sqlConnectionString }}
-          sql-file: "./Db/Migrations.sql"            
+          sql-file: "Migrations.sql"            
 
   cleanup:
     name: Clean up
