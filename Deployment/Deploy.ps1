@@ -170,6 +170,15 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
 
 helm install keda kedacore/keda -n $namespace
 
+$content = Get-Content .\Deployment\load-balancer-service.yaml
+$content = $content.Replace('$IP_ADD_RESOURCE_GROUP', $pipResGroup)
+$content = $content.Replace('$IP_ADD', $STATIC_IP)
+Set-Content -Path ".\load-balancer-service.yaml" -Value $content
+kubectl apply -f .\load-balancer-service.yaml --namespace $namespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable configure load balancer."
+}
+
 # if ($EnableFrontdoor) {
 #     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
 # }
