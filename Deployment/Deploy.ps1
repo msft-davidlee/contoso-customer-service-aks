@@ -141,17 +141,27 @@ if (!$testSecret) {
         --cert .\cert.cer
 
     if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to set TLS for demo.contoso.com."
+        throw "An error has occured. Unable to set TLS for secrets."
     }
 }
-    
+
+# Public IP is assigned only for Prod which we will reuse.
+$pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+$STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get static IP."
+}
+$DNS_LABEL = "contoso-coffee-house-rewards-pip"
+
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     --set controller.replicaCount=2 `
     --set controller.metrics.enabled=true `
     --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-    --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+    --set-string controller.podAnnotations."prometheus\.io/port"="10254" `
+    --set controller.service.loadBalancerIP=$STATIC_IP `
+    --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$DNS_LABEL
 
 helm install keda kedacore/keda -n $namespace
 
