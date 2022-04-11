@@ -174,7 +174,7 @@ helm install keda kedacore/keda -n $namespace
 # }
 # else {
 $content = Get-Content .\Deployment\external-ingress.yaml
-
+$content = $content.Replace('$INGRESS_RESOURCE_GROUP', $pipRes.resourceGroup)
 $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
 $content = $content.Replace('$API_DOMAIN', $apiDomain)
