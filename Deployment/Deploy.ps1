@@ -159,7 +159,7 @@ helm install keda kedacore/keda -n $namespace
 #     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
 # }
 # else {
-$content = Get-Content .\Deployment\external-ingress.yam
+$content = Get-Content .\Deployment\external-ingress.yaml
 
 $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
