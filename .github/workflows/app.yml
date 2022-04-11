@@ -55,7 +55,7 @@ jobs:
         name: Resolve shared resources
         working-directory: .\deployment
         run: |
-          .\ResolveSharedResources.ps1 -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
+          .\ResolveSharedResources.ps1 -stackNameTag ${{ env.STACK_NAME_TAG }} -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
 
       - name: Build azure environment
         id: deploy
