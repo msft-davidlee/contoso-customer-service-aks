@@ -145,13 +145,27 @@ if (!$testSecret) {
     }
 }
 
+# Public IP is assigned only for Prod which we will reuse.
+$pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+$STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get static IP."
+}
+$DNS_LABEL = "contoso-coffee-house-rewards-pip"
+
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     --set controller.replicaCount=2 `
     --set controller.metrics.enabled=true `
     --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-    --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+    --set-string controller.podAnnotations."prometheus\.io/port"="10254" `
+    --set controller.service.loadBalancerIP=$STATIC_IP `
+    --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$DNS_LABEL
+
+# Per doc, https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli#create-an-ingress-controller
+# If you create an IP address in a different resource group, ensure the cluster identity used by the AKS cluster 
+# has delegated permissions to the other resource group, such as Network Contributor. 
 
 helm install keda kedacore/keda -n $namespace
 
@@ -187,23 +201,6 @@ if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to deploy external ingress. $errorMsg "
     }    
 }
-
-# Set up load balancer with static IP
-# Public IP is assigned only for Prod which we will reuse.
-$pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-$STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to get static IP."
-}
-$content = Get-Content .\Deployment\load-balancer-service.yaml
-$content = $content.Replace('$IP_RESOURCE_GROUP', $pipRes.resourceGroup)
-$content = $content.Replace('$IP_ADDRESS', $STATIC_IP)
-
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to get static IP."
-}
-Set-Content -Path ".\load-balancer-service.yaml" -Value $content
-kubectl apply -f ".\load-balancer-service.yaml" --namespace $namespace
 
 # Step 5: Setup configuration for resources
 
