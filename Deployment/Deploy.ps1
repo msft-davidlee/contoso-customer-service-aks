@@ -117,7 +117,7 @@ else {
 helm repo update
 
 # Step 4b.
-$testSecret = (kubectl get secret aks-ingress-tls -o json -n $namespace)
+$testSecret = (kubectl get secret aks-csv-tls -o json -n $namespace)
 if (!$testSecret) {
 
     $strs = GetResource -stackName shared-storage -stackEnvironment prod
