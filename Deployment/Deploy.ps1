@@ -147,6 +147,7 @@ if (!$testSecret) {
 
 # Public IP is assigned only for Prod which we will reuse.
 $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+$pipResGroup=$pipRes.resourceGroup
 $STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get static IP."
@@ -155,17 +156,17 @@ $DNS_LABEL = "contoso-coffee-house-rewards-pip"
 
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
+# Per doc, https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli#create-an-ingress-controller
+# If you create an IP address in a different resource group, ensure the cluster identity used by the AKS cluster 
+# has delegated permissions to the other resource group, such as Network Contributor. 
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     --set controller.replicaCount=2 `
     --set controller.metrics.enabled=true `
     --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
     --set-string controller.podAnnotations."prometheus\.io/port"="10254" `
     --set controller.service.loadBalancerIP=$STATIC_IP `
+    --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$pipResGroup `
     --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$DNS_LABEL
-
-# Per doc, https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli#create-an-ingress-controller
-# If you create an IP address in a different resource group, ensure the cluster identity used by the AKS cluster 
-# has delegated permissions to the other resource group, such as Network Contributor. 
 
 helm install keda kedacore/keda -n $namespace
 
@@ -174,7 +175,6 @@ helm install keda kedacore/keda -n $namespace
 # }
 # else {
 $content = Get-Content .\Deployment\external-ingress.yaml
-$content = $content.Replace('$INGRESS_RESOURCE_GROUP', $pipRes.resourceGroup)
 $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
 $content = $content.Replace('$API_DOMAIN', $apiDomain)
