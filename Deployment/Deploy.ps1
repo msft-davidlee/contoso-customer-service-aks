@@ -65,6 +65,20 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable get app insights instrumentation key."
 }
 
+$config = GetResource -stackName shared-configuration -stackEnvironment prod
+$configName = $config.name
+
+$certDomainNamesJson = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get cert domain names from $configName."
+}
+
+$certDomainNames = $certDomainNamesJson | ConvertFrom-Json
+
+$customerServiceDomain = $certDomainNames.customerservive
+$apiDomain = $certDomainNames.api
+$memberPortalDomain = $certDomainNames.memberPortal
+
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
 
@@ -110,25 +124,21 @@ if (!$testSecret) {
     $BuildAccountName = $strs.name
 
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
-    kubectl create secret tls aks-ingress-tls `
-        --namespace $namespace `
-        --key .\demo.contoso.com.key `
-        --cert .\demo.contoso.com.crt
 
     kubectl create secret tls aks-csv-tls `
         --namespace $namespace `
-        --key .\customerservice.contoso.com.key `
-        --cert .\customerservice.contoso.com.crt
+        --key .\cert.key `
+        --cert .\cert.cer
 
     kubectl create secret tls aks-api-tls `
         --namespace $namespace `
-        --key .\api.contoso.com.key `
-        --cert .\api.contoso.com.crt
+        --key .\cert.key `
+        --cert .\cert.cer
 
     kubectl create secret tls aks-mem-tls `
         --namespace $namespace `
-        --key .\member.contoso.com.key `
-        --cert .\member.contoso.com.crt
+        --key .\cert.key `
+        --cert .\cert.cer
 
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to set TLS for demo.contoso.com."
@@ -149,7 +159,12 @@ helm install keda kedacore/keda -n $namespace
 #     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
 # }
 # else {
-$content = Get-Content .\Deployment\external-ingress.yaml    
+$content = Get-Content .\Deployment\external-ingress.yam
+
+$content = $content.Replace('$NAMESPACE', $namespace)
+$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
+$content = $content.Replace('$API_DOMAIN', $apiDomain)
+$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
 #}
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.

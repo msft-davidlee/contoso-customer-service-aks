@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$BUILD_ENV,
-    [Parameter(Mandatory = $true)][string]$Prefix)
+    [Parameter(Mandatory = $true)][string]$Prefix,
+    [Parameter(Mandatory = $true)][string]$StackNameTag)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -64,13 +65,13 @@ Write-Host "::set-output name=managedIdentityId::$mid"
 
 $config = GetResource -stackName shared-configuration -stackEnvironment prod
 $configName = $config.name
-$enableFrontdoor = (az appconfig kv show -n $configName --key "contoso-customer-service-aks/deployment-flags/enable-frontdoor" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$enableFrontdoor = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/enable-frontdoor" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-frontdoor flag from $configName."
 }
 Write-Host "::set-output name=enableFrontdoor::$enableFrontdoor"
 
-$queueType = (az appconfig kv show -n $configName --key "contoso-customer-service-aks/deployment-flags/queue-type" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$queueType = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/queue-type" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get queue-type flag from $configName."
 }

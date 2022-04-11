@@ -13,29 +13,16 @@ metadata:
 spec:
   tls:
   - hosts:
-    - demo.contoso.com
-    secretName: aks-ingress-tls
-  - hosts:
-    - customerservice.contoso.com
+    - $CUSTOMER_SERVICE_DOMAIN
     secretName: aks-csv-tls
   - hosts:
-    - api.contoso.com
+    - $API_DOMAIN
     secretName: aks-api-tls
   - hosts:
-    - member.contoso.com
+    - $MEMBER_PORTAL_DOMAIN
     secretName: aks-csv-tls              
   rules:
-  - host: demo.contoso.com
-    http:
-      paths:
-      - backend:
-          service:
-              name: prometheus-server
-              port:
-                  number: 9090
-        path: /(.*)
-        pathType: Prefix
-  - host: customerservice.contoso.com
+  - host: $CUSTOMER_SERVICE_DOMAIN
     http:
       paths:
       - backend:
@@ -45,9 +32,16 @@ spec:
               number: 80
         path: /(.*)
         pathType: Prefix
-  - host: api.contoso.com 
+  - host: $API_DOMAIN
     http:
       paths:
+      - backend:
+          service:
+              name: prometheus-server
+              port:
+                  number: 9090
+        path: /(.*)
+        pathType: Prefix      
       - backend:
           service:
             name: memberservice
@@ -69,7 +63,7 @@ spec:
               number: 80
         path: /partner/(.*)
         pathType: Prefix
-  - host: member.contoso.com
+  - host: $MEMBER_PORTAL_DOMAIN
     http:
       paths:
       - backend:
