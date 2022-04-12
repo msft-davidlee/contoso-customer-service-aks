@@ -3,11 +3,11 @@ kind: Service
 metadata:
   annotations:
     service.beta.kubernetes.io/azure-load-balancer-resource-group: $IP_ADD_RESOURCE_GROUP
-  name: ingress-nginx-controller
+  name: azure-load-balancer
 spec:
   loadBalancerIP: $IP_ADD
   type: LoadBalancer
   ports:
   - port: 80
   selector:
-    app: ingress-nginx-controller
+    app: azure-load-balancer
