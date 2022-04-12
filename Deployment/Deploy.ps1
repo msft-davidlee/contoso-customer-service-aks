@@ -146,12 +146,12 @@ if (!$testSecret) {
 }
 
 # Public IP is assigned only for Prod which we will reuse.
-$pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-$pipResGroup=$pipRes.resourceGroup
-$STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to get static IP."
-}
+# $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+# $pipResGroup=$pipRes.resourceGroup
+# $STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
+# if ($LastExitCode -ne 0) {
+#     throw "An error has occured. Unable to get static IP."
+# }
 
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
@@ -193,15 +193,6 @@ if ($LastExitCode -ne 0) {
     else {
         throw "An error has occured. Unable to deploy external ingress. $errorMsg "
     }    
-}
-
-$content = Get-Content .\Deployment\load-balancer-service.yaml
-$content = $content.Replace('$IP_ADD_RESOURCE_GROUP', $pipResGroup)
-$content = $content.Replace('$IP_ADD', $STATIC_IP)
-Set-Content -Path ".\load-balancer-service.yaml" -Value $content
-kubectl apply -f .\load-balancer-service.yaml --namespace $namespace
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable configure load balancer."
 }
 
 # Step 5: Setup configuration for resources
