@@ -82,7 +82,7 @@ $memberPortalDomain = $certDomainNames.memberPortal
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
-
+Write-Host "::set-output name=aksName::$AKS_NAME"
 # Step 3: Create a namespace for your resources if it does not exist.
 $namespace = "myapps"
 $testNamespace = kubectl get namespace $namespace

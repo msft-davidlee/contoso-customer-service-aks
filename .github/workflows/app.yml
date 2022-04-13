@@ -158,7 +158,7 @@ jobs:
         working-directory: .\deployment
         run: |
           .\EnableAGICAddOn.ps1 `
-          -AKSName ${{ needs.cd_deploy.outputs.aksName }} `
+          -AKSName ${{ steps.appsdeploy.outputs.aksName }} `
           -AKResourceGroupSName ${{ steps.resolve-shared-resources.outputs.appResourceGroup }} `
           -ApplicationGatewayResourceId ${{ steps.deployappgw.outputs.applicationGatewayResourceId }}            
 
