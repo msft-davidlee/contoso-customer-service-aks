@@ -88,6 +88,7 @@ jobs:
       queueName: ${{ steps.deploy.outputs.queueName }}
       queueType: ${{ steps.resolve-shared-resources.outputs.queueType }}
       enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
+      aksName:  ${{ steps.deploy.outputs.aksName }}
 
   deploy_apps:
     name: Deploy apps
@@ -131,7 +132,7 @@ jobs:
 
       - name: Build azure environment
         if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
-        id: deploy
+        id: deployappgw
         uses: azure/arm-deploy@v1
         with:
           deploymentName: "deploy-agw-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}"
@@ -150,6 +151,16 @@ jobs:
             subnetId=${{ steps.resolve-shared-resources.outputs.appGwsubnetId }}
             aksIPAddress=${{ steps.appsdeploy.outputs.serviceip }}
             customerServiceHostName=${{ steps.resolve-shared-resources.outputs.customerServiceHostName }}
+
+      - id: enable-application-gateway-add-on
+        if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
+        name: Enable Application Gateway Add-on
+        working-directory: .\deployment
+        run: |
+          .\EnableAGICAddOn.ps1 `
+          -AKSName ${{ needs.cd_deploy.outputs.aksName }} `
+          -AKResourceGroupSName ${{ steps.resolve-shared-resources.outputs.appResourceGroup }} `
+          -ApplicationGatewayResourceId ${{ steps.deployappgw.outputs.applicationGatewayResourceId }}            
 
   deploy_db:
     name: Deploy database

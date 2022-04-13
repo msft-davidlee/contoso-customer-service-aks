@@ -94,8 +94,8 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = {
       {
         name: 'customer-service-app-https-setting'
         properties: {
-          port: 443
-          protocol: 'Https'
+          port: 80
+          protocol: 'Http'
           cookieBasedAffinity: 'Disabled'
           hostName: customerServiceHostName
           pickHostNameFromBackendAddress: false
@@ -145,7 +145,7 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = {
       {
         name: 'customer-service-app-https-setting-probe'
         properties: {
-          protocol: 'Https'
+          protocol: 'Http'
           host: customerServiceHostName
           path: '/health'
           interval: 30
@@ -163,3 +163,5 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = {
     }
   }
 }
+
+output applicationGatewayResourceId string = appGw.id
