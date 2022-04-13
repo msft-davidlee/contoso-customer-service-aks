@@ -147,7 +147,7 @@ jobs:
             version=${{ github.run_number }}
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
-            subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
+            subnetId=${{ steps.resolve-shared-resources.outputs.appGwsubnetId }}
             aksIPAddress=${{ steps.appsdeploy.outputs.serviceip }}
             customerServiceHostName=${{ steps.resolve-shared-resources.outputs.customerServiceHostName }}
 

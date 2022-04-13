@@ -33,9 +33,15 @@ if (!$subnets) {
 }          
 $subnetId = ($subnets | Where-Object { $_.name -eq "aks" }).id
 if (!$subnetId) {
-    throw "Unable to find Subnet resource!"
+    throw "Unable to find aks Subnet resource!"
 }
 Write-Host "::set-output name=subnetId::$subnetId"
+
+$appGwsubnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+if (!$appGwsubnetId ) {
+    throw "Unable to find AppGW ubnet resource!"
+}
+Write-Host "::set-output name=appGwsubnetId::$appGwsubnetId"
 
 
 $kv = GetResource -stackName shared-key-vault -stackEnvironment prod
