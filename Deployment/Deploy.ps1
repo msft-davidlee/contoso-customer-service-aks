@@ -79,6 +79,11 @@ $customerServiceDomain = $certDomainNames.customerservive
 $apiDomain = $certDomainNames.api
 $memberPortalDomain = $certDomainNames.memberPortal
 
+$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/deployment-flags/enable-app-gateway" --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get cert domain names from $configName."
+}
+
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
 
@@ -167,7 +172,14 @@ helm install keda kedacore/keda -n $namespace
 #     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
 # }
 # else {
-$content = Get-Content .\Deployment\external-ingress.yaml
+
+if ($EnableApplicationGateway -eq "true") {
+    $content = Get-Content .\Deployment\external-ingress-agw.yaml
+}
+else {
+    $content = Get-Content .\Deployment\external-ingress.yaml
+}
+
 $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
 $content = $content.Replace('$API_DOMAIN', $apiDomain)
