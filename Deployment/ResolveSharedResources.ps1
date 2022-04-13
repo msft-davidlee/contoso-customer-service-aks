@@ -83,7 +83,7 @@ if ($LastExitCode -ne 0) {
 }
 Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
 
-$staticIPResourceId = (GetResource -stackName aks-public-ip).id
+$staticIPResourceId = (GetResource -stackName aks-public-ip -stackEnvironment prod).id
 Write-Host "::set-output name=staticIPResourceId::$staticIPResourceId"
 
 $certDomainNamesJson = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
