@@ -84,6 +84,7 @@ jobs:
       managedIdentityId: ${{ steps.deploy.outputs.managedIdentityId }}
       queueName: ${{ steps.deploy.outputs.queueName }}
       queueType: ${{ steps.resolve-shared-resources.outputs.queueType }}
+      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
 
   deploy_apps:
     name: Deploy apps
@@ -112,9 +113,39 @@ jobs:
           -AKSMSIId ${{ needs.cd_deploy.outputs.managedIdentityId }} `
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
           -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
-          -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }}
+          -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
+          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
 
-  deploy_db:
+      - id: resolve-shared-resources
+        if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
+        name: Resolve shared resources
+        working-directory: .\deployment
+        run: |
+          .\ResolveSharedResources.ps1 -stackNameTag ${{ env.STACK_NAME_TAG }} -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
+
+      - name: Build azure environment
+        if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
+        id: deploy
+        uses: azure/arm-deploy@v1
+        with:
+          deploymentName: "deploy-agw-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}"
+          resourceGroupName: ${{ steps.resolve-shared-resources.outputs.appResourceGroup }}
+          template: ./deployment/deploy.bicep
+          parameters: >
+            prefix=${{ secrets.PREFIX }}
+            appEnvironment=${{ needs.setup.outputs.build_env }}
+            staticIPResourceId=${{ steps.resolve-shared-resources.outputs.staticIPResourceId }}
+            stackNameTag=${{ env.STACK_NAME_TAG }}
+            branch=${{ github.ref }}
+            location=${{ steps.resolve-shared-resources.outputs.location }}
+            version=${{ github.run_number }}
+            aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
+            keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
+            subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
+            aksIPAddress=${{ steps.appsdeploy.outputs.serviceip }}
+            customerServiceHostName=${{ steps.resolve-shared-resources.outputs.customerServiceHostName }}            
+
+  deploy_db:serviceip
     name: Deploy database
     needs:    
       - setup

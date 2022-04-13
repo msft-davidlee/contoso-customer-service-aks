@@ -76,3 +76,32 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get queue-type flag from $configName."
 }
 Write-Host "::set-output name=queueType::$queueType"
+
+$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/enable-app-gateway" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get enable-application gateway flag  from $configName."
+}
+Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
+
+$staticIPResourceId = (GetResource -stackName aks-public-ip).id
+Write-Host "::set-output name=staticIPResourceId::$staticIPResourceId"
+
+$certDomainNamesJson = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get cert domain names from $configName."
+}
+
+if ($EnableApplicationGateway){
+    $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).applicationgateway
+}else {
+    $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).ingress
+}
+
+
+$customerServiceDomain = $certDomainNames.customerservice
+$apiDomain = $certDomainNames.api
+$memberPortalDomain = $certDomainNames.memberPortal
+
+Write-Host "::set-output name=customerServiceHostName::$customerServiceDomain"
+Write-Host "::set-output name=apiHostName::$apiDomain"
+Write-Host "::set-output name=memberHostName::$memberPortalDomain"

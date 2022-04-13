@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory = $true)][string]$APP_VERSION,
     [Parameter(Mandatory = $true)][string]$BACKEND_FUNC_STORAGE_SUFFIX,
     [Parameter(Mandatory = $true)][string]$STORAGE_QUEUE_SUFFIX,
-    [Parameter(Mandatory = $true)][string]$STACK_NAME_TAG)
+    [Parameter(Mandatory = $true)][string]$STACK_NAME_TAG,
+    [Parameter(Mandatory = $true)][string]$EnableApplicationGateway)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -75,14 +76,9 @@ if ($LastExitCode -ne 0) {
 
 $certDomainNames = $certDomainNamesJson | ConvertFrom-Json
 
-$customerServiceDomain = $certDomainNames.customerservive
+$customerServiceDomain = $certDomainNames.customerservice
 $apiDomain = $certDomainNames.api
 $memberPortalDomain = $certDomainNames.memberPortal
-
-$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/deployment-flags/enable-app-gateway" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to get cert domain names from $configName."
-}
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME

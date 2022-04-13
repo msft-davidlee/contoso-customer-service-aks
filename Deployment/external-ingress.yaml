@@ -20,7 +20,7 @@ spec:
     secretName: aks-api-tls
   - hosts:
     - $MEMBER_PORTAL_DOMAIN
-    secretName: aks-csv-tls              
+    secretName: aks-mem-tls              
   rules:
   - host: $CUSTOMER_SERVICE_DOMAIN
     http:
