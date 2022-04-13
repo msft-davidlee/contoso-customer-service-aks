@@ -474,5 +474,5 @@ if ($QueueType -eq "Storage") {
 }
 
 # Step 12: Output ip address
-$serviceip = kubectl get ing demo-ingress -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+$serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"
