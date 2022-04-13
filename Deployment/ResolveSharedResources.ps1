@@ -14,7 +14,7 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
     
     $res = ($platformRes | Where-Object { $_.tags.'stack-environment' -eq $stackEnvironment })
     if (!$res) {
-        throw "Unable to find resource by environment!"
+        throw "Unable to find $stackName resource by $stackEnvironment environment!"
     }
     
     return $res
