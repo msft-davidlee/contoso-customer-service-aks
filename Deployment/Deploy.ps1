@@ -79,7 +79,7 @@ $customerServiceDomain = $certDomainNames.customerservive
 $apiDomain = $certDomainNames.api
 $memberPortalDomain = $certDomainNames.memberPortal
 
-$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/deployment-flags/enable-app-gateway" --auth-mode login | ConvertFrom-Json).value
+$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/deployment-flags/enable-app-gateway" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get cert domain names from $configName."
 }
