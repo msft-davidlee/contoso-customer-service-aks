@@ -143,9 +143,9 @@ jobs:
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
             aksIPAddress=${{ steps.appsdeploy.outputs.serviceip }}
-            customerServiceHostName=${{ steps.resolve-shared-resources.outputs.customerServiceHostName }}            
+            customerServiceHostName=${{ steps.resolve-shared-resources.outputs.customerServiceHostName }}
 
-  deploy_db:serviceip
+  deploy_db:
     name: Deploy database
     needs:    
       - setup
