@@ -146,14 +146,6 @@ if (!$testSecret) {
     }
 }
 
-# Public IP is assigned only for Prod which we will reuse.
-# $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-# $pipResGroup=$pipRes.resourceGroup
-# $STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
-# if ($LastExitCode -ne 0) {
-#     throw "An error has occured. Unable to get static IP."
-# }
-
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
@@ -476,3 +468,37 @@ if ($QueueType -eq "Storage") {
 # Step 12: Output ip address
 $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"
+
+if ($EnableApplicationGateway -eq "true") {
+
+    $appGwId = (az network application-gateway show -n $AKSName -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+    if (!$appGwId) {
+
+        # Public IP is assigned only for Prod which we will reuse.
+        $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+        # $pipResGroup=$pipRes.resourceGroup
+        # $STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
+        # if ($LastExitCode -ne 0) {
+        #     throw "An error has occured. Unable to get static IP."
+        # }
+
+        $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
+        $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }    
+        $vnetName = $vnet.name
+        $location = $vnet.location
+    
+        az network application-gateway create -n $AKSName -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
+            --public-ip-address $pipRes.name `
+            --vnet-name $vnetName `
+            --subnet "appgw"
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to create Application gateway."
+        }    
+    }
+
+    az aks enable-addons -n $AKSName -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $AKSName
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to enable Application gateway add-on."
+    }  
+
+}

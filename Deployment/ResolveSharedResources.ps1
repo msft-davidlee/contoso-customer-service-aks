@@ -20,6 +20,8 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
     return $res
 }
 
+$ErrorActionPreference = "Stop"
+
 $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV
 $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }
 $vnetRg = $vnet.resourceGroup
@@ -36,13 +38,6 @@ if (!$subnetId) {
     throw "Unable to find aks Subnet resource!"
 }
 Write-Host "::set-output name=subnetId::$subnetId"
-
-$appGwsubnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
-if (!$appGwsubnetId ) {
-    throw "Unable to find AppGW ubnet resource!"
-}
-Write-Host "::set-output name=appGwsubnetId::$appGwsubnetId"
-
 
 $kv = GetResource -stackName shared-key-vault -stackEnvironment prod
 $kvName = $kv.name
@@ -89,17 +84,15 @@ if ($LastExitCode -ne 0) {
 }
 Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
 
-$staticIPResourceId = (GetResource -stackName aks-public-ip -stackEnvironment prod).id
-Write-Host "::set-output name=staticIPResourceId::$staticIPResourceId"
-
 $certDomainNamesJson = (az appconfig kv show -n $configName --key "$StackNameTag/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get cert domain names from $configName."
 }
 
-if ($EnableApplicationGateway){
+if ($EnableApplicationGateway) {
     $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).applicationgateway
-}else {
+}
+else {
     $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).ingress
 }
 
