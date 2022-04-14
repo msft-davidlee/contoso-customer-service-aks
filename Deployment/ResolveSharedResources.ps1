@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$BUILD_ENV,
-    [Parameter(Mandatory = $true)][string]$Prefix)
+    [Parameter(Mandatory = $true)][string]$Prefix,
+    [Parameter(Mandatory = $true)][string]$StackNameTag)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -13,13 +14,15 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
     
     $res = ($platformRes | Where-Object { $_.tags.'stack-environment' -eq $stackEnvironment })
     if (!$res) {
-        throw "Unable to find resource by environment!"
+        throw "Unable to find $stackName resource by $stackEnvironment environment!"
     }
     
     return $res
 }
 
-$allResources = GetResource -stackName networking -stackEnvironment $BUILD_ENV
+$ErrorActionPreference = "Stop"
+
+$allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV
 $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }
 $vnetRg = $vnet.resourceGroup
 $vnetName = $vnet.name
@@ -32,10 +35,9 @@ if (!$subnets) {
 }          
 $subnetId = ($subnets | Where-Object { $_.name -eq "aks" }).id
 if (!$subnetId) {
-    throw "Unable to find Subnet resource!"
+    throw "Unable to find aks Subnet resource!"
 }
 Write-Host "::set-output name=subnetId::$subnetId"
-
 
 $kv = GetResource -stackName shared-key-vault -stackEnvironment prod
 $kvName = $kv.name
@@ -64,14 +66,41 @@ Write-Host "::set-output name=managedIdentityId::$mid"
 
 $config = GetResource -stackName shared-configuration -stackEnvironment prod
 $configName = $config.name
-$enableFrontdoor = (az appconfig kv show -n $configName --key "contoso-customer-service-aks/deployment-flags/enable-frontdoor" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$enableFrontdoor = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/enable-frontdoor" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-frontdoor flag from $configName."
 }
 Write-Host "::set-output name=enableFrontdoor::$enableFrontdoor"
 
-$queueType = (az appconfig kv show -n $configName --key "contoso-customer-service-aks/deployment-flags/queue-type" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$queueType = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/queue-type" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get queue-type flag from $configName."
 }
 Write-Host "::set-output name=queueType::$queueType"
+
+$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/enable-app-gateway" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get enable-application gateway flag  from $configName."
+}
+Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
+
+$certDomainNamesJson = (az appconfig kv show -n $configName --key "$StackNameTag/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get cert domain names from $configName."
+}
+
+if ($EnableApplicationGateway) {
+    $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).applicationgateway
+}
+else {
+    $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).ingress
+}
+
+
+$customerServiceDomain = $certDomainNames.customerservice
+$apiDomain = $certDomainNames.api
+$memberPortalDomain = $certDomainNames.memberPortal
+
+Write-Host "::set-output name=customerServiceHostName::$customerServiceDomain"
+Write-Host "::set-output name=apiHostName::$apiDomain"
+Write-Host "::set-output name=memberHostName::$memberPortalDomain"

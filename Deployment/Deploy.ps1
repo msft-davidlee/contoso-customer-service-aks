@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory = $true)][string]$APP_VERSION,
     [Parameter(Mandatory = $true)][string]$BACKEND_FUNC_STORAGE_SUFFIX,
     [Parameter(Mandatory = $true)][string]$STORAGE_QUEUE_SUFFIX,
-    [Parameter(Mandatory = $true)][string]$STACK_NAME_TAG)
+    [Parameter(Mandatory = $true)][string]$STACK_NAME_TAG,
+    [Parameter(Mandatory = $true)][string]$EnableApplicationGateway)
 
 function GetResource([string]$stackName, [string]$stackEnvironment) {
     $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
@@ -65,9 +66,35 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable get app insights instrumentation key."
 }
 
+$config = GetResource -stackName shared-configuration -stackEnvironment prod
+$configName = $config.name
+
+$certDomainNamesJson = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get cert domain names from $configName."
+}
+
+$certDomainNames = $certDomainNamesJson | ConvertFrom-Json
+
+$customerServiceDomain = $certDomainNames.ingress.customerservice
+$apiDomain = $certDomainNames.ingress.api
+$memberPortalDomain = $certDomainNames.ingress.memberPortal
+
+if (!$customerServiceDomain) {
+    throw "Unable to get Customer Service Domain"
+}
+
+if (!$apiDomain) {
+    throw "Unable to get API Domain"
+}
+
+if (!$memberPortalDomain) {
+    throw "Unable to get Member Portal Domain"
+}
+
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
-
+Write-Host "::set-output name=aksName::$AKS_NAME"
 # Step 3: Create a namespace for your resources if it does not exist.
 $namespace = "myapps"
 $testNamespace = kubectl get namespace $namespace
@@ -103,38 +130,34 @@ else {
 helm repo update
 
 # Step 4b.
-$testSecret = (kubectl get secret aks-ingress-tls -o json -n $namespace)
+$testSecret = (kubectl get secret aks-csv-tls -o json -n $namespace)
 if (!$testSecret) {
 
     $strs = GetResource -stackName shared-storage -stackEnvironment prod
     $BuildAccountName = $strs.name
 
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
-    kubectl create secret tls aks-ingress-tls `
-        --namespace $namespace `
-        --key .\demo.contoso.com.key `
-        --cert .\demo.contoso.com.crt
 
     kubectl create secret tls aks-csv-tls `
         --namespace $namespace `
-        --key .\customerservice.contoso.com.key `
-        --cert .\customerservice.contoso.com.crt
+        --key .\cert.key `
+        --cert .\cert.cer
 
     kubectl create secret tls aks-api-tls `
         --namespace $namespace `
-        --key .\api.contoso.com.key `
-        --cert .\api.contoso.com.crt
+        --key .\cert.key `
+        --cert .\cert.cer
 
     kubectl create secret tls aks-mem-tls `
         --namespace $namespace `
-        --key .\member.contoso.com.key `
-        --cert .\member.contoso.com.crt
+        --key .\cert.key `
+        --cert .\cert.cer
 
     if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to set TLS for demo.contoso.com."
+        throw "An error has occured. Unable to set TLS for secrets."
     }
 }
-    
+
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
@@ -149,7 +172,18 @@ helm install keda kedacore/keda -n $namespace
 #     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
 # }
 # else {
-$content = Get-Content .\Deployment\external-ingress.yaml    
+
+if ($EnableApplicationGateway -eq "true") {
+    $content = Get-Content .\Deployment\external-ingress-agw.yaml
+}
+else {
+    $content = Get-Content .\Deployment\external-ingress.yaml
+}
+
+$content = $content.Replace('$NAMESPACE', $namespace)
+$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
+$content = $content.Replace('$API_DOMAIN', $apiDomain)
+$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
 #}
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
@@ -444,5 +478,65 @@ if ($QueueType -eq "Storage") {
 }
 
 # Step 12: Output ip address
-$serviceip = kubectl get ing demo-ingress -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+$serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
 Write-Host "::set-output name=serviceip::$serviceip"
+
+if ($EnableApplicationGateway -eq "true") {
+
+    $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+
+    $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
+    $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
+    $vnetName = $vnet.name
+    $vnetRg = $vnet.resourceGroup
+    $location = $vnet.location
+
+    $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
+    if (!$subnets) {
+        throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
+    }          
+    $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+    if (!$subnetId) {
+        throw "Unable to find appgw Subnet resource!"
+    }
+
+    if (!$appGwId) {
+
+        # Public IP is assigned only for Prod which we will reuse.
+        $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+    
+        az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
+            --public-ip-address $pipRes.id `
+            --vnet-name $vnet.id `
+            --subnet $subnetId
+
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to create Application gateway."
+        }
+
+        $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to create Application gateway Id."
+        }
+    }
+
+    $nodeResourceGroup = az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup"
+    $routeTableId = az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv
+
+    # https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/
+    az network vnet subnet update --ids $subnetId --route-table $routeTableId
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to associate route table onto app gw subnet."
+    }
+
+    az extension add --name aks-preview
+
+    $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
+
+    if (!$isInstalled) {
+        az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to enable Application gateway add-on."
+        }
+    }
+}

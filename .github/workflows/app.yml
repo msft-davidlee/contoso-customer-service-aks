@@ -26,8 +26,10 @@ jobs:
           if ($envSelector -eq '') {
             Write-Host "Using github.ref for choosing build_env"      
             if ('${{ github.ref }}' -eq 'refs/heads/main') {
+              Write-Host "Using prod for build_env"
               echo "::set-output name=build_env::prod"
             } else {
+              Write-Host "Using dev for build_env"
               echo "::set-output name=build_env::dev"
             }
           } else {
@@ -55,7 +57,10 @@ jobs:
         name: Resolve shared resources
         working-directory: .\deployment
         run: |
-          .\ResolveSharedResources.ps1 -BUILD_ENV ${{ needs.setup.outputs.build_env }} -Prefix ${{ secrets.PREFIX }}
+          .\ResolveSharedResources.ps1 `
+          -stackNameTag ${{ env.STACK_NAME_TAG }} `
+          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
+          -Prefix ${{ secrets.PREFIX }}
 
       - name: Build azure environment
         id: deploy
@@ -84,6 +89,7 @@ jobs:
       managedIdentityId: ${{ steps.deploy.outputs.managedIdentityId }}
       queueName: ${{ steps.deploy.outputs.queueName }}
       queueType: ${{ steps.resolve-shared-resources.outputs.queueType }}
+      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }} 
 
   deploy_apps:
     name: Deploy apps
@@ -112,7 +118,8 @@ jobs:
           -AKSMSIId ${{ needs.cd_deploy.outputs.managedIdentityId }} `
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
           -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
-          -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }}
+          -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
+          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
 
   deploy_db:
     name: Deploy database
@@ -171,4 +178,4 @@ jobs:
       - id: removedevresources
         name: Remove Dev Resources
         run: |
-          .\Deployment\RemoveDevResources.ps1
+          .\Deployment\RemoveDevResources.ps1 -stackNameTag=${{ env.STACK_NAME_TAG }}
