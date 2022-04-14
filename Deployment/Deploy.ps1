@@ -484,30 +484,26 @@ Write-Host "::set-output name=serviceip::$serviceip"
 if ($EnableApplicationGateway -eq "true") {
 
     $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+
+    $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
+    $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
+    $vnetName = $vnet.name
+    $vnetRg = $vnet.resourceGroup
+    $location = $vnet.location
+
+    $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
+    if (!$subnets) {
+        throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
+    }          
+    $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+    if (!$subnetId) {
+        throw "Unable to find appgw Subnet resource!"
+    }
+    
     if (!$appGwId) {
 
         # Public IP is assigned only for Prod which we will reuse.
         $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-        # $pipResGroup=$pipRes.resourceGroup
-        # $STATIC_IP = (az network public-ip show --name $pipRes.name -g $pipRes.resourceGroup | ConvertFrom-Json).ipAddress
-        # if ($LastExitCode -ne 0) {
-        #     throw "An error has occured. Unable to get static IP."
-        # }
-
-        $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
-        $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
-        $vnetName = $vnet.name
-        $vnetRg = $vnet.resourceGroup
-        $location = $vnet.location
-
-        $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
-        if (!$subnets) {
-            throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
-        }          
-        $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
-        if (!$subnetId) {
-            throw "Unable to find appgw Subnet resource!"
-        }
     
         az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
             --public-ip-address $pipRes.id `
@@ -522,15 +518,15 @@ if ($EnableApplicationGateway -eq "true") {
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to create Application gateway Id."
         }
+    }
 
-        $nodeResourceGroup = $(az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup")
-        $routeTableId = $(az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv)
+    $nodeResourceGroup = $(az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup")
+    $routeTableId = $(az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv)
 
-        # https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/
-        az network vnet subnet update --ids $subnetId --route-table $routeTableId
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to associate route table onto app gw subnet."
-        }
+    # https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/
+    az network vnet subnet update --ids $subnetId --route-table $routeTableId
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to associate route table onto app gw subnet."
     }
 
     az extension add --name aks-preview
