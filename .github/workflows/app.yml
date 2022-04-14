@@ -118,8 +118,7 @@ jobs:
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
           -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
           -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
-          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }} `
-          -Location ${{ needs.cd_deploy.outputs.location }}
+          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
 
       # - id: resolve-shared-resources
       #   if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
