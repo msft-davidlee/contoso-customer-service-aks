@@ -70,6 +70,14 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = {
         }
       }
     ]
+    frontendPorts: [
+      {
+        name: 'port_https'
+        properties: {
+          port: 443
+        }
+      }
+    ]
     httpListeners: [
       {
         name: 'customer-service-app'
