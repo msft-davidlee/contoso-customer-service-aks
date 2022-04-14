@@ -483,13 +483,12 @@ if ($EnableApplicationGateway -eq "true") {
         # }
 
         $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
-        $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }    
-        $vnetName = $vnet.name
+        $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
         $location = $vnet.location
     
         az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
-            --public-ip-address $pipRes.name `
-            --vnet-name $vnetName `
+            --public-ip-address $pipRes.id `
+            --vnet-name $vnet.id `
             --subnet "appgw"
 
         if ($LastExitCode -ne 0) {
