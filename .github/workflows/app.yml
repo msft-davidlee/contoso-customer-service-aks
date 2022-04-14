@@ -149,8 +149,6 @@ jobs:
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             subnetId=${{ steps.resolve-shared-resources.outputs.appGwsubnetId }}
-            aksIPAddress=${{ steps.appsdeploy.outputs.serviceip }}
-            customerServiceHostName=${{ steps.resolve-shared-resources.outputs.customerServiceHostName }}
 
       - id: enable-application-gateway-add-on
         if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
