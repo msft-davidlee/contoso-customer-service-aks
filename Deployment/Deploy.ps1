@@ -512,9 +512,14 @@ if ($EnableApplicationGateway -eq "true") {
         }
     }
 
-    az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
-    if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to enable Application gateway add-on."
-    }  
+    az extension add --name aks-preview
 
+    $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
+
+    if (!$isInstalled) {
+        az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to enable Application gateway add-on."
+        }
+    }
 }
