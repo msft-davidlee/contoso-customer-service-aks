@@ -484,12 +484,23 @@ if ($EnableApplicationGateway -eq "true") {
 
         $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
         $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
+        $vnetName = $vnet.name
+        $vnetRg = $vnet.resourceGroup
         $location = $vnet.location
+
+        $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
+        if (!$subnets) {
+            throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
+        }          
+        $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+        if (!$subnetId) {
+            throw "Unable to find appgw Subnet resource!"
+        }
     
         az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
             --public-ip-address $pipRes.id `
             --vnet-name $vnet.id `
-            --subnet "appgw"
+            --subnet $subnetId
 
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to create Application gateway."
