@@ -471,7 +471,7 @@ Write-Host "::set-output name=serviceip::$serviceip"
 
 if ($EnableApplicationGateway -eq "true") {
 
-    $appGwId = (az network application-gateway show -n $AKSName -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+    $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
     if (!$appGwId) {
 
         # Public IP is assigned only for Prod which we will reuse.
@@ -487,7 +487,7 @@ if ($EnableApplicationGateway -eq "true") {
         $vnetName = $vnet.name
         $location = $vnet.location
     
-        az network application-gateway create -n $AKSName -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
+        az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
             --public-ip-address $pipRes.name `
             --vnet-name $vnetName `
             --subnet "appgw"
@@ -496,7 +496,7 @@ if ($EnableApplicationGateway -eq "true") {
         }    
     }
 
-    az aks enable-addons -n $AKSName -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $AKSName
+    az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $AKS_NAME
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to enable Application gateway add-on."
     }  
