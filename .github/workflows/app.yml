@@ -87,8 +87,7 @@ jobs:
       managedIdentityId: ${{ steps.deploy.outputs.managedIdentityId }}
       queueName: ${{ steps.deploy.outputs.queueName }}
       queueType: ${{ steps.resolve-shared-resources.outputs.queueType }}
-      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}      
-      location: ${{ steps.resolve-shared-resources.outputs.location }}
+      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
 
   deploy_apps:
     name: Deploy apps
