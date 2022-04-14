@@ -76,9 +76,21 @@ if ($LastExitCode -ne 0) {
 
 $certDomainNames = $certDomainNamesJson | ConvertFrom-Json
 
-$customerServiceDomain = $certDomainNames.customerservice
-$apiDomain = $certDomainNames.api
-$memberPortalDomain = $certDomainNames.memberPortal
+$customerServiceDomain = $certDomainNames.ingress.customerservice
+$apiDomain = $certDomainNames.ingress.api
+$memberPortalDomain = $certDomainNames.ingress.memberPortal
+
+if (!$customerServiceDomain) {
+    throw "Unable to get Customer Service Domain"
+}
+
+if (!$apiDomain) {
+    throw "Unable to get API Domain"
+}
+
+if (!$memberPortalDomain) {
+    throw "Unable to get Member Portal Domain"
+}
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
