@@ -499,7 +499,7 @@ if ($EnableApplicationGateway -eq "true") {
     if (!$subnetId) {
         throw "Unable to find appgw Subnet resource!"
     }
-    
+
     if (!$appGwId) {
 
         # Public IP is assigned only for Prod which we will reuse.
@@ -520,8 +520,8 @@ if ($EnableApplicationGateway -eq "true") {
         }
     }
 
-    $nodeResourceGroup = $(az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup")
-    $routeTableId = $(az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv)
+    $nodeResourceGroup = az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup"
+    $routeTableId = az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv
 
     # https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/
     az network vnet subnet update --ids $subnetId --route-table $routeTableId
