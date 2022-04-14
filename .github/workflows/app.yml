@@ -26,8 +26,10 @@ jobs:
           if ($envSelector -eq '') {
             Write-Host "Using github.ref for choosing build_env"      
             if ('${{ github.ref }}' -eq 'refs/heads/main') {
+              Write-Host "Using prod for build_env"
               echo "::set-output name=build_env::prod"
             } else {
+              Write-Host "Using dev for build_env"
               echo "::set-output name=build_env::dev"
             }
           } else {
@@ -87,7 +89,7 @@ jobs:
       managedIdentityId: ${{ steps.deploy.outputs.managedIdentityId }}
       queueName: ${{ steps.deploy.outputs.queueName }}
       queueType: ${{ steps.resolve-shared-resources.outputs.queueType }}
-      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
+      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }} 
 
   deploy_apps:
     name: Deploy apps
