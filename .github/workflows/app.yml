@@ -120,46 +120,6 @@ jobs:
           -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
           -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
 
-      # - id: resolve-shared-resources
-      #   if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
-      #   name: Resolve shared resources
-      #   working-directory: .\deployment
-      #   run: |
-      #     .\ResolveSharedResources.ps1 `
-      #     -stackNameTag ${{ env.STACK_NAME_TAG }} `
-      #     -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
-      #     -Prefix ${{ secrets.PREFIX }}
-
-      # - name: Build azure environment
-      #   if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
-      #   id: deployappgw
-      #   uses: azure/arm-deploy@v1
-      #   with:
-      #     deploymentName: "deploy-agw-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}"
-      #     resourceGroupName: ${{ steps.resolve-shared-resources.outputs.appResourceGroup }}
-      #     template: ./deployment/applicationgateway.bicep
-      #     parameters: >
-      #       prefix=${{ secrets.PREFIX }}
-      #       appEnvironment=${{ needs.setup.outputs.build_env }}
-      #       staticIPResourceId=${{ steps.resolve-shared-resources.outputs.staticIPResourceId }}
-      #       stackNameTag=${{ env.STACK_NAME_TAG }}
-      #       branch=${{ github.ref }}
-      #       location=${{ steps.resolve-shared-resources.outputs.location }}
-      #       version=${{ github.run_number }}
-      #       aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
-      #       keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
-      #       subnetId=${{ steps.resolve-shared-resources.outputs.appGwsubnetId }}
-
-      # - id: enable-application-gateway-add-on
-      #   if: needs.cd_deploy.outputs.enableApplicationGateway == 'true'
-      #   name: Enable Application Gateway Add-on
-      #   working-directory: .\deployment
-      #   run: |
-      #     .\EnableAGICAddOn.ps1 `
-      #     -AKSName ${{ steps.appsdeploy.outputs.aksName }} `
-      #     -AKResourceGroupName ${{ steps.resolve-shared-resources.outputs.appResourceGroup }} `
-      #     -Location ${{ needs.cd_deploy.outputs.location }}
-
   deploy_db:
     name: Deploy database
     needs:    
