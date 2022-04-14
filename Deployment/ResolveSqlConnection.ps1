@@ -45,13 +45,15 @@ $BuildAccountName = $strs.name
 
 $sqlFile = "Migrations-$APP_VERSION.sql"
 $dacpac = "cch-$APP_VERSION.dacpac"
-az storage blob download-batch --destination $TEMPDIR -s apps --account-name $BuildAccountName --pattern $sqlFile
+#az storage blob download-batch --destination $TEMPDIR -s apps --account-name $BuildAccountName --pattern $sqlFile
+az storage blob download --file "$TEMPDIR\$sqlFile" --account-name $BuildAccountName --container-name apps --name $sqlFile
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to download sql file."
 }
 Write-Host "::set-output name=sqlFile::$TEMPDIR\$sqlFile"
 
-az storage blob download-batch --destination $TEMPDIR -s apps --account-name $BuildAccountName --pattern $dacpac
+#az storage blob download-batch --destination $TEMPDIR -s apps --account-name $BuildAccountName --pattern $dacpac
+az storage blob download --file "$TEMPDIR\$dacpac" --account-name $BuildAccountName --container-name apps --name $dacpac
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to download dacpac file."
 }
