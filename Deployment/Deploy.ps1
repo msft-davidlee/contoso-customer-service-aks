@@ -491,12 +491,18 @@ if ($EnableApplicationGateway -eq "true") {
             --public-ip-address $pipRes.name `
             --vnet-name $vnetName `
             --subnet "appgw"
+
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to create Application gateway."
-        }    
+        }
+
+        $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to create Application gateway Id."
+        }
     }
 
-    az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $AKS_NAME
+    az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to enable Application gateway add-on."
     }  
