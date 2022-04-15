@@ -161,7 +161,10 @@ if (!$testSecret) {
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 
-if ($EnableApplicationGateway) {
+if ($EnableApplicationGateway -eq "true") {
+
+    Write-Host "Configure ingress for app gateway."
+
     helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
         --set controller.replicaCount=2 `
         --set controller.metrics.enabled=true `
@@ -176,7 +179,7 @@ else {
     $ipFqdn = $pip.dnsSettings.fqdn
     $ipResGroup = $pipRes.resourceGroup
 
-    Write-Host "Configure static IP: $ip $ipFqdn $ipResGroup"
+    Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
 
     helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
         --set controller.replicaCount=2 `
