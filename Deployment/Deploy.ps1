@@ -175,16 +175,20 @@ else {
     $ip = $pip.ipAddress
     $ipFqdn = $pip.dnsSettings.fqdn
     $ipResGroup = $pipRes.resourceGroup
+
+    Write-Host "Configure static IP: $ip $ipFqdn $ipResGroup"
+
     helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
         --set controller.replicaCount=2 `
-        --set controller.metrics.enabled=true `
-        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254" `
         --set controller.service.loadBalancerIP=$ip `
         --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
-        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
+        --set controller.nodeSelector."kubernetes\.io/os"=linux `
+        --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
+        --set controller.metrics.enabled=true `
+        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 }
-
 
 helm install keda kedacore/keda -n $namespace
 
