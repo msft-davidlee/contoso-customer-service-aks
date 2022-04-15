@@ -171,15 +171,18 @@ if ($EnableApplicationGateway) {
 else {
     # Public IP is assigned only for Prod which we will reuse.
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-    $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json).ipAddress
+    $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
+    $ip = $pip.ipAddress
+    $ipFqdn = $pip.dnsSettings.fqdn
     $ipResGroup = $pipRes.resourceGroup
     helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
         --set controller.replicaCount=2 `
         --set controller.metrics.enabled=true `
         --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
         --set-string controller.podAnnotations."prometheus\.io/port"="10254" `
-        --set controller.service.loadBalancerIP="$pip" `
-        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"="$ipResGroup"
+        --set controller.service.loadBalancerIP=$ip `
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup
 }
 
 
