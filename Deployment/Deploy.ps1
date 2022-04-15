@@ -36,6 +36,7 @@ $all = GetResource -stackName $STACK_NAME_TAG -stackEnvironment $BUILD_ENV
 $aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClusters' }
 $AKS_RESOURCE_GROUP = $aks.resourceGroup
 $AKS_NAME = $aks.name
+$AKS_LOCATION = $aks.location.ToLower()
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
@@ -176,7 +177,8 @@ else {
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
     $ip = $pip.ipAddress
-    $ipFqdn = $pip.dnsSettings.fqdn
+    $ipPrefix = (New-Guid).ToString().ToLower().Substring(0, 8)
+    $ipFqdn = "cch-$ipPrefix.$AKS_LOCATION.cloudapp.azure.com"
     $ipResGroup = $pipRes.resourceGroup
 
     Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
