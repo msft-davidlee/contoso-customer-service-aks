@@ -160,11 +160,28 @@ if (!$testSecret) {
 
 # Step 4c. Install ingress controller
 # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
-helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-    --set controller.replicaCount=2 `
-    --set controller.metrics.enabled=true `
-    --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-    --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+
+if ($EnableApplicationGateway) {
+    helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+        --set controller.replicaCount=2 `
+        --set controller.metrics.enabled=true `
+        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+}
+else {
+    # Public IP is assigned only for Prod which we will reuse.
+    $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+    $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json).ipAddress
+    $ipResGroup = $pipRes.resourceGroup
+    helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+        --set controller.replicaCount=2 `
+        --set controller.metrics.enabled=true `
+        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254" `
+        --set controller.service.loadBalancerIP="$pip" `
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"="$ipResGroup"
+}
+
 
 helm install keda kedacore/keda -n $namespace
 
