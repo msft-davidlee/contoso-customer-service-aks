@@ -36,7 +36,6 @@ $all = GetResource -stackName $STACK_NAME_TAG -stackEnvironment $BUILD_ENV
 $aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClusters' }
 $AKS_RESOURCE_GROUP = $aks.resourceGroup
 $AKS_NAME = $aks.name
-$AKS_LOCATION = $aks.location.ToLower()
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
