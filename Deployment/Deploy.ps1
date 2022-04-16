@@ -177,7 +177,7 @@ else {
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
     $ip = $pip.ipAddress    
-    $ipFqdn = "contosocoffeehouseapps.$AKS_LOCATION.cloudapp.azure.com"
+    $ipFqdn = "contosocoffeehouseapps"
     $ipResGroup = $pipRes.resourceGroup
 
     Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
