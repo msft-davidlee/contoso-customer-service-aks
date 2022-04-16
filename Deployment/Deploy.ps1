@@ -176,9 +176,8 @@ else {
     # Public IP is assigned only for Prod which we will reuse.
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
-    $ip = $pip.ipAddress
-    $ipPrefix = (New-Guid).ToString().ToLower().Substring(0, 8)
-    $ipFqdn = "cch-$ipPrefix.$AKS_LOCATION.cloudapp.azure.com"
+    $ip = $pip.ipAddress    
+    $ipFqdn = "cchapps.$AKS_LOCATION.cloudapp.azure.com"
     $ipResGroup = $pipRes.resourceGroup
 
     Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
