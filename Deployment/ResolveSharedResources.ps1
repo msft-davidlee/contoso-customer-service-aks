@@ -104,3 +104,7 @@ $memberPortalDomain = $certDomainNames.memberPortal
 Write-Host "::set-output name=customerServiceHostName::$customerServiceDomain"
 Write-Host "::set-output name=apiHostName::$apiDomain"
 Write-Host "::set-output name=memberHostName::$memberPortalDomain"
+
+$pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+$pipResId = $pipRes.id
+Write-Host "::set-output name=pipResId::$pipResId"

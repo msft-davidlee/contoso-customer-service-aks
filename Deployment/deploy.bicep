@@ -14,6 +14,8 @@ param nodesResourceGroup string
 param backendFuncStorageSuffix string
 param storageQueueSuffix string
 param stackNameTag string
+param publicIPResId string
+param enableAppGateway string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -243,5 +245,130 @@ resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-
   }
   properties: {
     workspaceResourceId: wks.id
+  }
+}
+
+var appGwId = resourceId('Microsoft.Network/applicationGateways', stackName)
+
+resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAppGateway == 'true') {
+  name: stackName
+  location: location
+  tags: {
+    'managed-by-k8s-ingress': 'true'
+    'stack-name': stackNameTag
+    'stack-environment': appEnvironment
+    'stack-branch': branch
+    'stack-version': version
+    'stack-last-updated': lastUpdated
+    'stack-sub-name': 'demo'
+  }
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${aksMSIId}': {}
+    }
+  }
+  properties: {
+    sslCertificates: [
+      {
+        name: 'contosgwcerts'
+        properties: {
+          keyVaultSecretId: 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/secrets/contosgwcerts'
+        }
+      }
+    ]
+    sku: {
+      name: 'WAF_v2'
+      tier: 'WAF_v2'
+    }
+    autoscaleConfiguration: {
+      minCapacity: 1
+      maxCapacity: 2
+    }
+    gatewayIPConfigurations: [
+      {
+        name: 'appGatewayIpConfig'
+        properties: {
+          subnet: {
+            id: subnetId
+          }
+        }
+      }
+    ]
+    frontendIPConfigurations: [
+      {
+        name: 'appGwPublicFrontendIp'
+        properties: {
+          publicIPAddress: {
+            id: publicIPResId
+          }
+        }
+      }
+    ]
+    frontendPorts: [
+      {
+        name: 'port_https'
+        properties: {
+          port: 443
+        }
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: 'customer-service'
+        properties: {
+          backendAddresses: []
+        }
+      }
+    ]
+    backendHttpSettingsCollection: [
+      {
+        name: 'customer-service-app-http-setting'
+        properties: {
+          port: 80
+          protocol: 'Http'
+        }
+      }
+    ]
+    httpListeners: [
+      {
+        name: 'customer-service-app'
+        properties: {
+          frontendIPConfiguration: {
+            id: '${appGwId}/frontendIPConfigurations/appGwPublicFrontendIp'
+          }
+          frontendPort: {
+            id: '${appGwId}/frontendPorts/port_https'
+          }
+          protocol: 'Https'
+          sslCertificate: {
+            id: '${appGwId}/sslCertificates/contosgwcerts'
+          }
+        }
+      }
+    ]
+    requestRoutingRules: [
+      {
+        name: 'frontend-to-customer-service-app'
+        properties: {
+          ruleType: 'Basic'
+          httpListener: {
+            id: '${appGwId}/httpListeners/customer-service-app'
+          }
+          backendAddressPool: {
+            id: '${appGwId}/backendAddressPools/customer-service'
+          }
+          backendHttpSettings: {
+            id: '${appGwId}/backendHttpSettingsCollection/customer-service-app-http-setting'
+          }
+        }
+      }
+    ]
+    webApplicationFirewallConfiguration: {
+      enabled: true
+      firewallMode: 'Detection'
+      ruleSetType: 'OWASP'
+      ruleSetVersion: '3.0'
+    }
   }
 }

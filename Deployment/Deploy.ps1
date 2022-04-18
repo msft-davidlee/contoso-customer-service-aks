@@ -111,7 +111,13 @@ $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" 
 
 # Step 4a: Add the ingress-nginx repository
 if (!$foundHelmIngressRepo ) {
-    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    if ($EnableApplicationGateway) {
+        helm init
+        helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
+    }
+    else {
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    }    
 }
 else {
     Write-Host "Skip adding ingress-nginx repo with helm as it already exist."
@@ -165,11 +171,28 @@ if ($EnableApplicationGateway -eq "true") {
 
     Write-Host "Configure ingress for app gateway."
 
-    helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-        --set controller.replicaCount=2 `
-        --set controller.metrics.enabled=true `
-        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+    $identity = az identity list -g $AKS_RESOURCE_GROUP | ConvertFrom-Json
+    $mid = $identity.id    
+    $midClientId = $identity.$clientId
+
+    $subscriptionId = (az account show | ConvertFrom-Json).id
+
+    $content = Get-Content .\Deployment\helm-config.yaml
+    $content = $content.Replace('$SubscriptionId', $subscriptionId)
+    $content = $content.Replace('$ResourceGroupName', $AKS_RESOURCE_GROUP)
+    $content = $content.Replace('$ApplicationGatewayName', $AKS_NAME)
+    $content = $content.Replace('$NAMESPACE', $namespace)
+    $content = $content.Replace('$IdentityResourceId', $mid)
+    $content = $content.Replace('$IdentityClientId', $midClientId)
+    Set-Content -Path ".\helm-config.yaml" -Value $content
+    
+    helm install -f helm-config.yaml application-gateway-kubernetes-ingress/ingress-azure
+
+    # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+    #     --set controller.replicaCount=2 `
+    #     --set controller.metrics.enabled=true `
+    #     --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+    #     --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 }
 else {
     # Public IP is assigned only for Prod which we will reuse.
@@ -510,42 +533,42 @@ Write-Host "::set-output name=serviceip::$serviceip"
 
 if ($EnableApplicationGateway -eq "true") {
 
-    $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+    # $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
 
-    $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
-    $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
-    $vnetName = $vnet.name
-    $vnetRg = $vnet.resourceGroup
-    $location = $vnet.location
+    # $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
+    # $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
+    # $vnetName = $vnet.name
+    # $vnetRg = $vnet.resourceGroup
+    # $location = $vnet.location
 
-    $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
-    if (!$subnets) {
-        throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
-    }          
-    $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
-    if (!$subnetId) {
-        throw "Unable to find appgw Subnet resource!"
-    }
+    # $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
+    # if (!$subnets) {
+    #     throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
+    # }          
+    # $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+    # if (!$subnetId) {
+    #     throw "Unable to find appgw Subnet resource!"
+    # }
 
-    if (!$appGwId) {
+    # if (!$appGwId) {
 
-        # Public IP is assigned only for Prod which we will reuse.
-        $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+    #     # Public IP is assigned only for Prod which we will reuse.
+    #     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     
-        az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
-            --public-ip-address $pipRes.id `
-            --vnet-name $vnet.id `
-            --subnet $subnetId
+    #     az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
+    #         --public-ip-address $pipRes.id `
+    #         --vnet-name $vnet.id `
+    #         --subnet $subnetId
 
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to create Application gateway."
-        }
+    #     if ($LastExitCode -ne 0) {
+    #         throw "An error has occured. Unable to create Application gateway."
+    #     }
 
-        $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to create Application gateway Id."
-        }
-    }
+    #     $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+    #     if ($LastExitCode -ne 0) {
+    #         throw "An error has occured. Unable to create Application gateway Id."
+    #     }
+    # }
 
     $nodeResourceGroup = az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup"
     $routeTableId = az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv
@@ -556,14 +579,14 @@ if ($EnableApplicationGateway -eq "true") {
         throw "An error has occured. Unable to associate route table onto app gw subnet."
     }
 
-    az extension add --name aks-preview
+    # az extension add --name aks-preview
 
-    $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
+    # $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
 
-    if (!$isInstalled) {
-        az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to enable Application gateway add-on."
-        }
-    }
+    # if (!$isInstalled) {
+    #     az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
+    #     if ($LastExitCode -ne 0) {
+    #         throw "An error has occured. Unable to enable Application gateway add-on."
+    #     }
+    # }
 }
