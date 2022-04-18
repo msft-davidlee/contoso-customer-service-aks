@@ -194,7 +194,7 @@ if ($EnableApplicationGateway -eq "true") {
     $content = $content.Replace('$IdentityClientId', $midClientId)
     Set-Content -Path ".\helm-config.yaml" -Value $content
 
-    helm install -f helm-config.yaml application-gateway-kubernetes-ingress/ingress-azure
+    helm install -f helm-config.yaml ingress-azure application-gateway-kubernetes-ingress/ingress-azure --namespace $namespace
 
     # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     #     --set controller.replicaCount=2 `
