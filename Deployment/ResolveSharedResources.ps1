@@ -39,6 +39,9 @@ if (!$subnetId) {
 }
 Write-Host "::set-output name=subnetId::$subnetId"
 
+$appGwSubnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+Write-Host "::set-output name=appGwSubnetId::$appGwSubnetId"
+
 $kv = GetResource -stackName shared-key-vault -stackEnvironment prod
 $kvName = $kv.name
 Write-Host "::set-output name=keyVaultName::$kvName"

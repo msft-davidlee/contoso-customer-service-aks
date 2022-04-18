@@ -87,6 +87,7 @@ jobs:
             stackNameTag=${{ env.STACK_NAME_TAG }}
             publicIPResId=${{ steps.resolve-shared-resources.outputs.pipResId }}
             enableAppGateway=${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
+            appGwSubnetId=${{ steps.resolve-shared-resources.outputs.appGwSubnetId }}
     outputs:
       managedIdentityId: ${{ steps.deploy.outputs.managedIdentityId }}
       queueName: ${{ steps.deploy.outputs.queueName }}

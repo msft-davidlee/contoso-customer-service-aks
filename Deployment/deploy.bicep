@@ -16,6 +16,7 @@ param storageQueueSuffix string
 param stackNameTag string
 param publicIPResId string
 param enableAppGateway string
+param appGwSubnetId string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -290,7 +291,7 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
         name: 'appGatewayIpConfig'
         properties: {
           subnet: {
-            id: subnetId
+            id: appGwSubnetId
           }
         }
       }

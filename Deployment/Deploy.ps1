@@ -111,7 +111,7 @@ $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" 
 
 # Step 4a: Add the ingress-nginx repository
 if (!$foundHelmIngressRepo ) {
-    if ($EnableApplicationGateway) {
+    if ($EnableApplicationGateway -eq "true") {
         helm init
         helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
     }
@@ -185,7 +185,7 @@ if ($EnableApplicationGateway -eq "true") {
     $content = $content.Replace('$IdentityResourceId', $mid)
     $content = $content.Replace('$IdentityClientId', $midClientId)
     Set-Content -Path ".\helm-config.yaml" -Value $content
-    
+
     helm install -f helm-config.yaml application-gateway-kubernetes-ingress/ingress-azure
 
     # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
