@@ -300,9 +300,9 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
     ]
     frontendPorts: [
       {
-        name: 'port_https'
+        name: 'port_http'
         properties: {
-          port: 443
+          port: 80
         }
       }
     ]
@@ -331,12 +331,9 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
             id: '${appGwId}/frontendIPConfigurations/appGwPublicFrontendIp'
           }
           frontendPort: {
-            id: '${appGwId}/frontendPorts/port_https'
+            id: '${appGwId}/frontendPorts/port_http'
           }
-          protocol: 'Https'
-          sslCertificate: {
-            id: '${appGwId}/sslCertificates/contosgwcerts'
-          }
+          protocol: 'Http'
         }
       }
     ]
