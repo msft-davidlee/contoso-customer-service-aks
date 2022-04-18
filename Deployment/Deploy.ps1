@@ -181,7 +181,7 @@ if ($EnableApplicationGateway -eq "true") {
 
     $identity = az identity list -g $AKS_RESOURCE_GROUP | ConvertFrom-Json
     $mid = $identity.id    
-    $midClientId = $identity.$clientId
+    $midClientId = $identity.clientId
 
     $subscriptionId = (az account show | ConvertFrom-Json).id
 
