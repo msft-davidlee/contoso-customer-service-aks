@@ -535,20 +535,20 @@ if ($EnableApplicationGateway -eq "true") {
 
     # $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
 
-    # $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
-    # $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
-    # $vnetName = $vnet.name
-    # $vnetRg = $vnet.resourceGroup
+    $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
+    $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
+    $vnetName = $vnet.name
+    $vnetRg = $vnet.resourceGroup
     # $location = $vnet.location
 
-    # $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
-    # if (!$subnets) {
-    #     throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
-    # }          
-    # $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
-    # if (!$subnetId) {
-    #     throw "Unable to find appgw Subnet resource!"
-    # }
+    $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
+    if (!$subnets) {
+        throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
+    }
+    $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+    if (!$subnetId) {
+        throw "Unable to find appgw Subnet resource!"
+    }
 
     # if (!$appGwId) {
 
