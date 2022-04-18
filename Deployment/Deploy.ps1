@@ -107,20 +107,28 @@ else {
 
 # Step 4: Setup an external ingress controller
 $repoList = helm repo list --output json | ConvertFrom-Json
-$foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1
 
-# Step 4a: Add the ingress-nginx repository
-if (!$foundHelmIngressRepo ) {
-    if ($EnableApplicationGateway -eq "true") {
+if ($EnableApplicationGateway -eq "true") {
+    $foundHelmAppGwRepo = ($repoList | Where-Object { $_.name -eq "application-gateway-kubernetes-ingress" }).Count -eq 1
+
+    if (!$foundHelmAppGwRepo) {
         helm init
         helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
     }
     else {
-        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+        Write-Host "Skip adding application-gateway-kubernetes-ingress with helm as it already exist."
     }    
 }
 else {
-    Write-Host "Skip adding ingress-nginx repo with helm as it already exist."
+    $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1
+
+    # Step 4a: Add the ingress-nginx repository
+    if (!$foundHelmIngressRepo ) {
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx   
+    }
+    else {
+        Write-Host "Skip adding ingress-nginx repo with helm as it already exist."
+    }
 }
 
 $foundHelmKedaCoreRepo = ($repoList | Where-Object { $_.name -eq "kedacore" }).Count -eq 1
