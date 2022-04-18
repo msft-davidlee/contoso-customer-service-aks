@@ -230,13 +230,14 @@ output queueName string = queueName
 
 // We don't actually need to create this because it should be created automatically.
 // However, we would like it to be tagged so that's why we are defining it here.
-var containerInsightsName = 'ContainerInsights(${stackName})'
+var containerInsightsName = 'ContainerInsights(${wks.name})'
 resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' = {
   name: containerInsightsName
   location: location
   tags: tags
   plan: {
     name: containerInsightsName
+    promotionCode: ''
     product: 'OMSGallery/ContainerInsights'
     publisher: 'Microsoft'
   }
