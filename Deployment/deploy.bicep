@@ -270,14 +270,6 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
     }
   }
   properties: {
-    sslCertificates: [
-      {
-        name: 'contosgwcerts'
-        properties: {
-          keyVaultSecretId: 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/secrets/contosgwcerts'
-        }
-      }
-    ]
     sku: {
       name: 'WAF_v2'
       tier: 'WAF_v2'
