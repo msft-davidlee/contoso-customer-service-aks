@@ -193,7 +193,7 @@ if ($EnableApplicationGateway -eq "true") {
     # https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-install-new#install-aad-pod-identity
     # Install AAD Pod Identity to your cluster
     # kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment.yaml
-    helm install aad-pod-identity aad-pod-identity/aad-pod-identity
+    helm install aad-pod-identity aad-pod-identity/aad-pod-identity --namespace $namespace
 
     Write-Host "Configure ingress for app gateway."
 
