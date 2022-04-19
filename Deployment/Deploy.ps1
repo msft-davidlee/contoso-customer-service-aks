@@ -111,8 +111,7 @@ $repoList = helm repo list --output json | ConvertFrom-Json
 if ($EnableApplicationGateway -eq "true") {
     $foundHelmAppGwRepo = ($repoList | Where-Object { $_.name -eq "application-gateway-kubernetes-ingress" }).Count -eq 1
 
-    if (!$foundHelmAppGwRepo) {
-        helm init
+    if (!$foundHelmAppGwRepo) {        
         helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
     }
     else {
@@ -236,6 +235,7 @@ helm install keda kedacore/keda -n $namespace
 # else {
 
 if ($EnableApplicationGateway -eq "true") {
+    Write-Host "Using yaml for application gateway ingress controller."
     $content = Get-Content .\Deployment\external-ingress-agw.yaml
 }
 else {
@@ -267,6 +267,8 @@ if ($LastExitCode -ne 0) {
     else {
         throw "An error has occured. Unable to deploy external ingress. $errorMsg "
     }    
+}else {
+    Write-Host "Applied ingress config for ingress controller."
 }
 
 # Step 5: Setup configuration for resources
@@ -539,9 +541,11 @@ if ($QueueType -eq "Storage") {
     }
 }
 
-# Step 12: Output ip address
-$serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
-Write-Host "::set-output name=serviceip::$serviceip"
+if ($EnableApplicationGateway -ne "true") {
+    # Step 12: Output ip address
+    $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+    Write-Host "::set-output name=serviceip::$serviceip"
+}
 
 if ($EnableApplicationGateway -eq "true") {
 
