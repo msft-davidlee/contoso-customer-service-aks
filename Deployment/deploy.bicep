@@ -170,8 +170,8 @@ resource aks 'Microsoft.ContainerService/managedClusters@2022-01-02-preview' = {
     kubernetesVersion: kubernetesVersion
     networkProfile: {
       networkPlugin: (enableAppGateway == 'true') ? 'azure' : 'kubenet'
-      serviceCidr: (enableAppGateway == 'true') ? '10.0.2.0/24' : '10.250.0.0/16'
-      dnsServiceIP: (enableAppGateway == 'true') ? '10.0.2.10' : '10.250.0.10'
+      serviceCidr: (enableAppGateway == 'true') ? '10.0.240.0/24' : '10.250.0.0/16'
+      dnsServiceIP: (enableAppGateway == 'true') ? '10.0.240.10' : '10.250.0.10'
     }
     // We can provide a name but it cannot be existing
     // https://docs.microsoft.com/en-us/azure/aks/faq#can-i-provide-my-own-name-for-the-aks-node-resource-group
