@@ -23,8 +23,8 @@ appgw:
 # Leaving this variable out or setting it to blank or empty string would
 # result in Ingress Controller observing all acessible namespaces.
 #
-kubernetes:
-  watchNamespace: $NAMESPACE
+# kubernetes:
+#   watchNamespace: $NAMESPACE
 
 ################################################################################
 # Specify the authentication with Azure Resource Manager

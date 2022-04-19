@@ -113,10 +113,24 @@ if ($EnableApplicationGateway -eq "true") {
 
     if (!$foundHelmAppGwRepo) {        
         helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to add application-gateway-kubernetes-ingress."
+        }
     }
     else {
         Write-Host "Skip adding application-gateway-kubernetes-ingress with helm as it already exist."
-    }    
+    }
+    
+    $foundHelmAadPodId = ($repoList | Where-Object { $_.name -eq "aad-pod-identity" }).Count -eq 1
+    if (!$foundHelmAadPodId){
+        helm repo add aad-pod-identity https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to add aad-pod-identity."
+        }
+    }
+    else {
+        Write-Host "Skip adding aad-pod-identity with helm as it already exist."
+    }
 }
 else {
     $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1
@@ -178,8 +192,9 @@ if ($EnableApplicationGateway -eq "true") {
 
     # https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-install-new#install-aad-pod-identity
     # Install AAD Pod Identity to your cluster
-    kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment.yaml
-    
+    # kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment.yaml
+    helm install aad-pod-identity aad-pod-identity/aad-pod-identity
+
     Write-Host "Configure ingress for app gateway."
 
     $identity = az identity list -g $AKS_RESOURCE_GROUP | ConvertFrom-Json
@@ -197,7 +212,7 @@ if ($EnableApplicationGateway -eq "true") {
     $content = $content.Replace('$IdentityClientId', $midClientId)
     Set-Content -Path ".\helm-config.yaml" -Value $content
 
-    helm install -f helm-config.yaml ingress-azure application-gateway-kubernetes-ingress/ingress-azure
+    helm install -f helm-config.yaml ingress-azure application-gateway-kubernetes-ingress/ingress-azure --namespace $namespace
 
     # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     #     --set controller.replicaCount=2 `
