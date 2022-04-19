@@ -170,7 +170,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2022-01-02-preview' = {
     kubernetesVersion: kubernetesVersion
     networkProfile: {
       networkPlugin: (enableAppGateway == 'true') ? 'azure' : 'kubenet'
-      serviceCidr: (enableAppGateway == 'true') ? '10.0.240.0/24' : '10.250.0.0/16'
+      serviceCidr: (enableAppGateway == 'true') ? '10.0.240.0/21' : '10.250.0.0/16'
       dnsServiceIP: (enableAppGateway == 'true') ? '10.0.240.10' : '10.250.0.10'
     }
     // We can provide a name but it cannot be existing

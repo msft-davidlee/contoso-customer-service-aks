@@ -197,7 +197,7 @@ if ($EnableApplicationGateway -eq "true") {
     $content = $content.Replace('$IdentityClientId', $midClientId)
     Set-Content -Path ".\helm-config.yaml" -Value $content
 
-    helm install -f helm-config.yaml ingress-azure application-gateway-kubernetes-ingress/ingress-azure --namespace $namespace
+    helm install -f helm-config.yaml ingress-azure application-gateway-kubernetes-ingress/ingress-azure
 
     # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
     #     --set controller.replicaCount=2 `
@@ -586,14 +586,14 @@ if ($EnableApplicationGateway -eq "true") {
     #     }
     # }
 
-    $nodeResourceGroup = az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup"
-    $routeTableId = az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv
+    # $nodeResourceGroup = az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup"
+    # $routeTableId = az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv
 
     # https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/
-    az network vnet subnet update --ids $subnetId --route-table $routeTableId
-    if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to associate route table onto app gw subnet."
-    }
+    # az network vnet subnet update --ids $subnetId --route-table $routeTableId
+    # if ($LastExitCode -ne 0) {
+    #     throw "An error has occured. Unable to associate route table onto app gw subnet."
+    # }
 
     # az extension add --name aks-preview
 
