@@ -117,6 +117,8 @@ $repoList = helm repo list --output json | ConvertFrom-Json
 
 if ($EnableApplicationGateway -ne "true") {
 
+    kubectl apply -f ./Deployment/aspnetapp.yaml --namespace $namespace
+
     # Step 4a: Add the ingress-nginx repository
     $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1    
     if (!$foundHelmIngressRepo ) {
