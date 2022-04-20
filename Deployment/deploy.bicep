@@ -302,37 +302,6 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
         }
       }
     ]
-    backendAddressPools: [
-      {
-        name: 'customer-service'
-        properties: {
-          backendAddresses: []
-        }
-      }
-    ]
-    backendHttpSettingsCollection: [
-      {
-        name: 'customer-service-app-http-setting'
-        properties: {
-          port: 80
-          protocol: 'Http'
-        }
-      }
-    ]
-    httpListeners: [
-      {
-        name: 'customer-service-app'
-        properties: {
-          frontendIPConfiguration: {
-            id: '${appGwId}/frontendIPConfigurations/appGwPublicFrontendIp'
-          }
-          frontendPort: {
-            id: '${appGwId}/frontendPorts/port_http'
-          }
-          protocol: 'Http'
-        }
-      }
-    ]
     webApplicationFirewallConfiguration: {
       enabled: true
       firewallMode: 'Detection'
