@@ -39,6 +39,8 @@ if ($appGw) {
     $addOn = (az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName | ConvertFrom-Json)
     $objectId = $addOn.identity.objectId
     az role assignment create --role Contributor --assignee $objectId --scope $appGw.id
+
+    az role assignment create --role Reader --assignee $objectId --resource-group $appGw.resourceGroup
 }
 
 kubectl get services -n myapps
