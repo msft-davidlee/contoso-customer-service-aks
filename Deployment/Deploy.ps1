@@ -117,8 +117,6 @@ $repoList = helm repo list --output json | ConvertFrom-Json
 
 if ($EnableApplicationGateway -ne "true") {
 
-    kubectl apply -f ./Deployment/aspnetapp.yaml --namespace $namespace
-
     # Step 4a: Add the ingress-nginx repository
     $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1    
     if (!$foundHelmIngressRepo ) {
@@ -174,12 +172,16 @@ if ($EnableApplicationGateway -eq "true") {
     az extension add --name aks-preview
 
     $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
+    
     if (!$isInstalled) {        
         throw "An error has occured. Unable to verify Application gateway add-on is installed on AKS Cluster. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
     }
     else {
         Write-Host "Perfect, application gateway add-on is already installed."
     }
+
+    # Install this to test endpoint.
+    kubectl apply -f ./Deployment/aspnetapp.yaml --namespace $namespace
 }
 else {
 
