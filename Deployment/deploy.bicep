@@ -296,9 +296,57 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
     ]
     frontendPorts: [
       {
-        name: 'port_http'
+        name: 'default-frontend-port'
         properties: {
           port: 80
+        }
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: 'default-backend-pool'
+        properties: {
+          backendAddresses: []
+        }
+      }
+    ]
+    backendHttpSettingsCollection: [
+      {
+        name: 'default-backend-http-setting'
+        properties: {
+          port: 80
+          protocol: 'Http'
+        }
+      }
+    ]
+    httpListeners: [
+      {
+        name: 'default-listener'
+        properties: {
+          frontendIPConfiguration: {
+            id: '${appGwId}/frontendIPConfigurations/appGwPublicFrontendIp'
+          }
+          frontendPort: {
+            id: '${appGwId}/frontendPorts/default-frontend-port'
+          }
+          protocol: 'Http'
+        }
+      }
+    ]
+    requestRoutingRules: [
+      {
+        name: 'default-routing'
+        properties: {
+          ruleType: 'Basic'
+          httpListener: {
+            id: '${appGwId}/httpListeners/default-listener'
+          }
+          backendAddressPool: {
+            id: '${appGwId}/backendAddressPools/default-backend-pool'
+          }
+          backendHttpSettings: {
+            id: '${appGwId}/backendHttpSettingsCollection/default-backend-http-setting'
+          }
         }
       }
     ]
