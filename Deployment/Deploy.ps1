@@ -108,34 +108,10 @@ else {
 # Step 4: Setup an external ingress controller
 $repoList = helm repo list --output json | ConvertFrom-Json
 
-if ($EnableApplicationGateway -eq "true") {
-    # $foundHelmAppGwRepo = ($repoList | Where-Object { $_.name -eq "application-gateway-kubernetes-ingress" }).Count -eq 1
-
-    # if (!$foundHelmAppGwRepo) {        
-    #     helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
-    #     if ($LastExitCode -ne 0) {
-    #         throw "An error has occured. Unable to add application-gateway-kubernetes-ingress."
-    #     }
-    # }
-    # else {
-    #     Write-Host "Skip adding application-gateway-kubernetes-ingress with helm as it already exist."
-    # }
-    
-    # $foundHelmAadPodId = ($repoList | Where-Object { $_.name -eq "aad-pod-identity" }).Count -eq 1
-    # if (!$foundHelmAadPodId){
-    #     helm repo add aad-pod-identity https://raw.githubusercontent.com/Azure/aad-pod-identity/master/charts
-    #     if ($LastExitCode -ne 0) {
-    #         throw "An error has occured. Unable to add aad-pod-identity."
-    #     }
-    # }
-    # else {
-    #     Write-Host "Skip adding aad-pod-identity with helm as it already exist."
-    # }
-}
-else {
-    $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1
+if ($EnableApplicationGateway -ne "true") {
 
     # Step 4a: Add the ingress-nginx repository
+    $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1    
     if (!$foundHelmIngressRepo ) {
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx   
     }
@@ -145,8 +121,6 @@ else {
 }
 
 $foundHelmKedaCoreRepo = ($repoList | Where-Object { $_.name -eq "kedacore" }).Count -eq 1
-
-# Step 4a: Add the ingress-nginx repository
 if (!$foundHelmKedaCoreRepo) {
     helm repo add kedacore https://kedacore.github.io/charts
 }
@@ -185,100 +159,51 @@ if (!$testSecret) {
     }
 }
 
-# Step 4c. Install ingress controller
-# See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
-
 if ($EnableApplicationGateway -eq "true") {
 
-    $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+    # Step 4c. Enable Application Gateway Ingress Controller (AGIC) using add-on method
+    az extension add --name aks-preview
 
-    $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
-    $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
-    $vnetName = $vnet.name
-    $vnetRg = $vnet.resourceGroup
-    # $location = $vnet.location
+    $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
+    if (!$isInstalled) {
+        
+        $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+        if ($LastExitCode -ne 0) {
+            throw "Unable to find eligible Application gateway."
+        }
 
-    $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
-    if (!$subnets) {
-        throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
-    }
-    $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
-    if (!$subnetId) {
-        throw "Unable to find appgw Subnet resource!"
-    }
+        if (!$appGwId) {
+            throw "Application gateway missing!"
+        }
 
-    if (!$appGwId) {
+        $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
+        $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
+        $vnetName = $vnet.name
+        $vnetRg = $vnet.resourceGroup
 
-        #     # Public IP is assigned only for Prod which we will reuse.
-        #     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-    
-        #     az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
-        #         --public-ip-address $pipRes.id `
-        #         --vnet-name $vnet.id `
-        #         --subnet $subnetId
+        $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
+        if (!$subnets) {
+            throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
+        }
+        $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+        if (!$subnetId) {
+            throw "Unable to find appgw Subnet resource!"
+        }
 
-        #     if ($LastExitCode -ne 0) {
-        #         throw "An error has occured. Unable to create Application gateway."
-        #     }
-
-        #     $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
-        #     if ($LastExitCode -ne 0) {
-        #         throw "An error has occured. Unable to create Application gateway Id."
-        #     }
-        # }
-
-        # $nodeResourceGroup = az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup"
-        # $routeTableId = az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv
-
-        # https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/
-        # az network vnet subnet update --ids $subnetId --route-table $routeTableId
-        # if ($LastExitCode -ne 0) {
-        #     throw "An error has occured. Unable to associate route table onto app gw subnet."
-        # }
-
-        az extension add --name aks-preview
-
-        $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
-
-        if (!$isInstalled) {
-            az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
-            if ($LastExitCode -ne 0) {
-                throw "An error has occured. Unable to enable Application gateway add-on."
-            }
+        az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to enable Application gateway add-on."
         }
     }
-
-    # https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-install-new#install-aad-pod-identity
-    # Install AAD Pod Identity to your cluster
-    # kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment.yaml
-    # helm install aad-pod-identity aad-pod-identity/aad-pod-identity --namespace $namespace
-
-    # Write-Host "Configure ingress for app gateway."
-
-    # $identity = az identity list -g $AKS_RESOURCE_GROUP | ConvertFrom-Json
-    # $mid = $identity.id    
-    # $midClientId = $identity.clientId
-
-    # $subscriptionId = (az account show | ConvertFrom-Json).id
-
-    # $content = Get-Content .\Deployment\helm-config.yaml
-    # $content = $content.Replace('$SubscriptionId', $subscriptionId)
-    # $content = $content.Replace('$ResourceGroupName', $AKS_RESOURCE_GROUP)
-    # $content = $content.Replace('$ApplicationGatewayName', $AKS_NAME)
-    # $content = $content.Replace('$NAMESPACE', $namespace)
-    # $content = $content.Replace('$IdentityResourceId', $mid)
-    # $content = $content.Replace('$IdentityClientId', $midClientId)
-    # Set-Content -Path ".\helm-config.yaml" -Value $content
-
-    # helm install -f helm-config.yaml ingress-azure application-gateway-kubernetes-ingress/ingress-azure --namespace $namespace
-
-    # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-    #     --set controller.replicaCount=2 `
-    #     --set controller.metrics.enabled=true `
-    #     --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-    #     --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+    else {
+        Write-Host "Application gateway add-on already installed."
+    }
 }
 else {
+
+    # Step 4c. Install ingress controller
+    # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
+
     # Public IP is assigned only for Prod which we will reuse.
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
