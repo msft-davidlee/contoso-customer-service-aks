@@ -176,20 +176,6 @@ if ($EnableApplicationGateway -eq "true") {
             throw "Application gateway missing!"
         }
 
-        $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
-        $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
-        $vnetName = $vnet.name
-        $vnetRg = $vnet.resourceGroup
-
-        $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
-        if (!$subnets) {
-            throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
-        }
-        $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
-        if (!$subnetId) {
-            throw "Unable to find appgw Subnet resource!"
-        }
-
         az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to enable Application gateway add-on."

@@ -30,6 +30,17 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to verify if aks and acr are connected."
 }
 
+$appGw = (az resource list -g $resourceGroupName --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json)[0]
+if ($appGw) {
+    # This is to account for the issue presented in the logs when we enable application gateway with add-on
+    # Could not create a role assignment for application gateway: 
+    # /subscriptions/***/resourceGroups/aks-dev/providers/Microsoft.Network/applicationGateways/<> 
+    # specified in ingressApplicationGateway addon. Are you an Owner on this subscription?
+    $addOn = (az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName | ConvertFrom-Json)
+    $objectId = $addOn.identity.objectId
+    az role assignment create --role Contributor --assignee $objectId --scope $appGw.id
+}
+
 kubectl get services -n myapps
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to list all services"
