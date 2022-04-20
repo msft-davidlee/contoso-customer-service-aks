@@ -37,6 +37,14 @@ $aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClus
 $AKS_RESOURCE_GROUP = $aks.resourceGroup
 $AKS_NAME = $aks.name
 
+$acr = GetResource -stackName shared-container-registry -stackEnvironment prod
+$acrName = $acr.Name
+
+az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io"
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+}
+
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
 $SqlServer = $sqlSv.fullyQualifiedDomainName
@@ -56,8 +64,7 @@ $AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-client
 $AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-client-secret --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AAD_AUDIENCE = (az keyvault secret show -n contoso-customer-service-aad-app-audience --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --vault-name $KeyVaultName --query value | ConvertFrom-Json)
-$acr = GetResource -stackName shared-container-registry -stackEnvironment prod
-$acrName = $acr.Name
+
 
 $log = $all | Where-Object { $_.type -eq 'microsoft.insights/components' }
 az extension add --name application-insights
@@ -161,28 +168,15 @@ if (!$testSecret) {
 
 if ($EnableApplicationGateway -eq "true") {
 
-    # Step 4c. Enable Application Gateway Ingress Controller (AGIC) using add-on method
+    # Step 4c. Check if Application Gateway Ingress Controller (AGIC) using add-on method is installed.
     az extension add --name aks-preview
 
     $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
-    if (!$isInstalled) {
-        
-        $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
-        if ($LastExitCode -ne 0) {
-            throw "Unable to find eligible Application gateway."
-        }
-
-        if (!$appGwId) {
-            throw "Application gateway missing!"
-        }
-
-        az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to enable Application gateway add-on."
-        }
+    if (!$isInstalled) {        
+        throw "An error has occured. Unable to verify Application gateway add-on is installed on AKS Cluster. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
     }
     else {
-        Write-Host "Application gateway add-on already installed."
+        Write-Host "Perfect, application gateway add-on is already installed."
     }
 }
 else {

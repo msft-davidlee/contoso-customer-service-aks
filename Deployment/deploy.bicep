@@ -258,15 +258,7 @@ var appGwId = resourceId('Microsoft.Network/applicationGateways', stackName)
 resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAppGateway == 'true') {
   name: stackName
   location: location
-  tags: {
-    'managed-by-k8s-ingress': 'true'
-    'stack-name': stackNameTag
-    'stack-environment': appEnvironment
-    'stack-branch': branch
-    'stack-version': version
-    'stack-last-updated': lastUpdated
-    'stack-sub-name': 'demo'
-  }
+  tags: tags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -338,23 +330,6 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
             id: '${appGwId}/frontendPorts/port_http'
           }
           protocol: 'Http'
-        }
-      }
-    ]
-    requestRoutingRules: [
-      {
-        name: 'frontend-to-customer-service-app'
-        properties: {
-          ruleType: 'Basic'
-          httpListener: {
-            id: '${appGwId}/httpListeners/customer-service-app'
-          }
-          backendAddressPool: {
-            id: '${appGwId}/backendAddressPools/customer-service'
-          }
-          backendHttpSettings: {
-            id: '${appGwId}/backendHttpSettingsCollection/customer-service-app-http-setting'
-          }
         }
       }
     ]
