@@ -68,3 +68,12 @@ spec:
               number: 80
         path: /(.*)
         pathType: Prefix
+  - http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: aspnetapp
+            port:
+              number: 80
+        pathType: Exact        
