@@ -32,11 +32,11 @@ spec:
       paths:
       - backend:
           service:
-              name: prometheus-server
-              port:
-                  number: 9090
-        path: /(.*)
-        pathType: Prefix      
+            name: aspnetapp
+            port:
+              number: 80
+        path: /
+        pathType: Exact      
       - backend:
           service:
             name: memberservice
@@ -73,7 +73,8 @@ spec:
       - path: /
         backend:
           service:
-            name: aspnetapp
-            port:
-              number: 80
-        pathType: Exact        
+              name: prometheus-server
+              port:
+                  number: 9090
+          path: /(.*)
+          pathType: Prefix
