@@ -70,11 +70,10 @@ spec:
         pathType: Prefix
   - http:
       paths:
-      - path: /
+      - path: /(.*)
         backend:
           service:
               name: prometheus-server
               port:
-                  number: 9090
-          path: /(.*)
-          pathType: Prefix
+                  number: 9090          
+        pathType: Prefix
