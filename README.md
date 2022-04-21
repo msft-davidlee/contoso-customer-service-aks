@@ -21,11 +21,17 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out member.contoso.com.crt 
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out api.contoso.com.crt -keyout api.contoso.com.key -subj "/CN=api.contoso.com/O=aks-ingress-tls"
 ```
 5. Next, upload the outputs to a container named certs in your storage account.
-6. Execute the GitHub action workflow. Review the output to ensure the workflow executes with no errors.
+6. Execute the GitHub action workflow. You will notice an error in the "Deploy Apps" step that will require you to run the CompleteSetup.ps1 script manually.
 7. Next, you will need to launch CloudShell or Azure CLI on your local machine. If you are using CloudShell, you can clone this repo there and CD into this folder. If you are on your local machine, be sure to do ``` az login ``` before executing the script.
 8. You will need to run the CompleteSetup.ps1 script manually. Be sure to pass in BUILD_ENV parameter which can be either dev or prod.
 9. To check if everything is setup successfully, review the script output for any errors.
-10. Update your local host file to point to the public ip.
+10. Once this is completed, you can now choose to run ONLY the steps that failed i.e. "Deploy Apps" step to save time. It should be successful this time.
+11. Update your local host file to point to the public ip.
+
+## Why do we need to run CompleteSetup.ps1 script?
+We need to associate access between AKS and ACR and that requires a higher level of privilege than a Contributor role. We are using a Service Principal to run GitHub Action which means we now have to assign a role assignment permission to this GitHub Service Principal which is not a good practice. I prefer this step to be manually executed by a real person, i.e. DevOps engineer for any form of role assignments. This is because this is really a one-time only assignment in most cases and if we deploy new code, this is not necessary anymore.
+
+In addition, if we are adding an Application Gateway Ingress Controller, there are additional role assignments we need to do, which again, we should have a real DevOps engineer perform instead of giving a SP more permissions. 
 
 ## Secrets
 | Name | Comments |
@@ -41,6 +47,15 @@ After that, in the App Configuration, you will need to configure the follow to e
 | Name | Comments |
 | --- | --- |
 | Key | contoso-customer-service-app-service/deployment-flags/enable-frontdoor |
+| Label | dev or prod |
+| Value | true or false |
+
+## Deploying Application Gateway
+If you are deploying Application Gateway, you should note that we will be using the Application Gateway Ingress Controller (AGIC)in this demo. To enable this configuration, you will need to follow the steps below to enable Application Gateway.
+
+| Name | Comments |
+| --- | --- |
+| Key | contoso-customer-service-app-service/deployment-flags/enable-app-gateway |
 | Label | dev or prod |
 | Value | true or false |
 
@@ -80,6 +95,8 @@ kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
 ```
 
 More information on the issue can be found here: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
+
+6. There is an issue with the Application Gateway Ingress Controller setup which is using the Add-On approach. The routes are not configured correctly for some reason and you will get a 502 error when you try to browse to the site. We will need to execute the FixApplicationGatewayRoute.ps1 script to fix the issue.
 
 ## Have an issue?
 You are welcome to create an issue if you need help but please note that there is no timeline to answer or resolve any issues you have with the contents of this project. Use the contents of this project at your own risk! If you are interested to volunteer to maintain this, please feel free to reach out to be added as a contributor and send Pull Requests (PR).
