@@ -10,7 +10,15 @@ $appGw = (az resource list -g $resourceGroupName --resource-type "Microsoft.Netw
 if ($appGw) {
 
     $rules = (az network application-gateway rule list --gateway-name $appGw.name -g $resourceGroupName) | ConvertFrom-Json
-    $rules | ForEach-Object {        
-        $_
+    $rules | ForEach-Object {                
+        $pathRule = az network application-gateway url-path-map show --ids $_.urlPathMap.id | ConvertFrom-Json
+        if (!$_.backendAddressPool) {      
+            
+            az network application-gateway url-path-map update --ids $pathRule.id `
+                --default-address-pool $pathRule.pathRules.backendAddressPool.id `
+                --default-http-settings $pathRule.pathRules.backendHttpSettings.id
+        } else {
+            Write-Host "No updates."
+        }
     }
 }
