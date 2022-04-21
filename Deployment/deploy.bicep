@@ -14,6 +14,9 @@ param nodesResourceGroup string
 param backendFuncStorageSuffix string
 param storageQueueSuffix string
 param stackNameTag string
+param publicIPResId string
+param enableAppGateway string
+param appGwSubnetId string
 
 var stackName = '${prefix}${appEnvironment}'
 var tags = {
@@ -37,7 +40,7 @@ resource appinsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = if (queueType == 'Storage') {
+resource str 'Microsoft.Storage/storageAccounts@2021-08-01' = if (queueType == 'Storage') {
   name: '${stackName}${storageQueueSuffix}'
   location: location
   tags: tags
@@ -60,18 +63,18 @@ resource str 'Microsoft.Storage/storageAccounts@2021-04-01' = if (queueType == '
   }
 }
 
-resource strqueue 'Microsoft.Storage/storageAccounts/queueServices@2021-04-01' = if (queueType == 'Storage') {
+resource strqueue 'Microsoft.Storage/storageAccounts/queueServices@2021-08-01' = if (queueType == 'Storage') {
   name: 'default'
   parent: str
 }
 
 var queueName = 'orders'
-resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@2021-04-01' = if (queueType == 'Storage') {
+resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@2021-08-01' = if (queueType == 'Storage') {
   name: queueName
   parent: strqueue
 }
 
-resource sbu 'Microsoft.ServiceBus/namespaces@2021-06-01-preview' = if (queueType == 'ServiceBus') {
+resource sbu 'Microsoft.ServiceBus/namespaces@2021-11-01' = if (queueType == 'ServiceBus') {
   name: stackName
   location: location
   tags: tags
@@ -80,7 +83,7 @@ resource sbu 'Microsoft.ServiceBus/namespaces@2021-06-01-preview' = if (queueTyp
   }
 }
 
-resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-06-01-preview' = if (queueType == 'ServiceBus') {
+resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: 'Sender'
   properties: {
@@ -90,7 +93,7 @@ resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2
   }
 }
 
-resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-06-01-preview' = if (queueType == 'ServiceBus') {
+resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: 'Listener'
   properties: {
@@ -100,7 +103,7 @@ resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2
   }
 }
 
-resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-06-01-preview' = if (queueType == 'ServiceBus') {
+resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: queueName
   properties: {
@@ -120,7 +123,7 @@ resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-06-01-preview' = 
 
 //https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/key-vault-parameter?tabs=azure-cli#use-getsecret-function
 
-resource kv 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
+resource kv 'Microsoft.KeyVault/vaults@2021-11-01-preview' existing = {
   name: keyVaultName
   scope: resourceGroup(subscription().subscriptionId, sharedResourceGroup)
 }
@@ -148,7 +151,11 @@ resource wks 'Microsoft.OperationalInsights/workspaces@2021-06-01' = {
   }
 }
 
-resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
+// Note: AAD Pod Identity is disabled by default on clusters with Kubenet network plugin. 
+// The NMI pods will fail to run with error AAD Pod Identity is not supported for Kubenet.
+// https://github.com/Azure/aad-pod-identity/blob/master/website/content/en/docs/Configure/aad_pod_identity_on_kubenet.md
+
+resource aks 'Microsoft.ContainerService/managedClusters@2022-01-02-preview' = {
   name: stackName
   location: location
   tags: tags
@@ -162,9 +169,9 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
     dnsPrefix: prefix
     kubernetesVersion: kubernetesVersion
     networkProfile: {
-      networkPlugin: 'kubenet'
-      serviceCidr: '10.250.0.0/16'
-      dnsServiceIP: '10.250.0.10'
+      networkPlugin: (enableAppGateway == 'true' || enableAppGateway == 'skip') ? 'azure' : 'kubenet'
+      serviceCidr: (enableAppGateway == 'true' || enableAppGateway == 'skip') ? '10.0.240.0/21' : '10.250.0.0/16'
+      dnsServiceIP: (enableAppGateway == 'true' || enableAppGateway == 'skip') ? '10.0.240.10' : '10.250.0.10'
     }
     // We can provide a name but it cannot be existing
     // https://docs.microsoft.com/en-us/azure/aks/faq#can-i-provide-my-own-name-for-the-aks-node-resource-group
@@ -203,7 +210,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
 output aksName string = aks.name
 output managedIdentityId string = aks.properties.addonProfiles.azureKeyvaultSecretsProvider.identity.clientId
 
-resource backendappStr 'Microsoft.Storage/storageAccounts@2021-02-01' = {
+resource backendappStr 'Microsoft.Storage/storageAccounts@2021-08-01' = {
   name: '${stackName}${backendFuncStorageSuffix}'
   location: location
   sku: {
@@ -243,5 +250,111 @@ resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-
   }
   properties: {
     workspaceResourceId: wks.id
+  }
+}
+
+var appGwId = resourceId('Microsoft.Network/applicationGateways', stackName)
+
+resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAppGateway == 'true') {
+  name: stackName
+  location: location
+  tags: tags
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${aksMSIId}': {}
+    }
+  }
+  properties: {
+    sku: {
+      name: 'WAF_v2'
+      tier: 'WAF_v2'
+    }
+    autoscaleConfiguration: {
+      minCapacity: 1
+      maxCapacity: 2
+    }
+    gatewayIPConfigurations: [
+      {
+        name: 'appGatewayIpConfig'
+        properties: {
+          subnet: {
+            id: appGwSubnetId
+          }
+        }
+      }
+    ]
+    frontendIPConfigurations: [
+      {
+        name: 'appGwPublicFrontendIp'
+        properties: {
+          publicIPAddress: {
+            id: publicIPResId
+          }
+        }
+      }
+    ]
+    frontendPorts: [
+      {
+        name: 'default-frontend-port'
+        properties: {
+          port: 80
+        }
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: 'default-backend-pool'
+        properties: {
+          backendAddresses: []
+        }
+      }
+    ]
+    backendHttpSettingsCollection: [
+      {
+        name: 'default-backend-http-setting'
+        properties: {
+          port: 80
+          protocol: 'Http'
+        }
+      }
+    ]
+    httpListeners: [
+      {
+        name: 'default-listener'
+        properties: {
+          frontendIPConfiguration: {
+            id: '${appGwId}/frontendIPConfigurations/appGwPublicFrontendIp'
+          }
+          frontendPort: {
+            id: '${appGwId}/frontendPorts/default-frontend-port'
+          }
+          protocol: 'Http'
+        }
+      }
+    ]
+    requestRoutingRules: [
+      {
+        name: 'default-routing'
+        properties: {
+          ruleType: 'Basic'
+          httpListener: {
+            id: '${appGwId}/httpListeners/default-listener'
+          }
+          backendAddressPool: {
+            id: '${appGwId}/backendAddressPools/default-backend-pool'
+          }
+          backendHttpSettings: {
+            id: '${appGwId}/backendHttpSettingsCollection/default-backend-http-setting'
+          }
+        }
+      }
+    ]
+    webApplicationFirewallConfiguration: {
+      enabled: true
+      firewallMode: 'Detection'
+      ruleSetType: 'OWASP'
+      ruleSetVersion: '3.0'
+    }
   }
 }

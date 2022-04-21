@@ -13,62 +13,62 @@ spec:
         app: alternateid
     spec:
       volumes:
-      - name: secrets-store-alternateid
-        csi:
-          driver: secrets-store.csi.k8s.io
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "azure-kvname-podid"
+        - name: secrets-store-alternateid
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: 'azure-kvname-podid'
       containers:
-      - name: alternateid
-        image: $ACRNAME.azurecr.io/contoso-demo-alternate-id-service:$VERSION
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 250m
-            memory: 256Mi
-        ports:
-        - containerPort: 80
-        volumeMounts:
+        - name: alternateid
+          image: $ACRNAME.azurecr.io/contoso-demo-alternate-id-service:$VERSION
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+          volumeMounts:
             - name: secrets-store-alternateid
-              mountPath: "/mnt/secrets-store"
+              mountPath: '/mnt/secrets-store'
               readOnly: true
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80
-        env:
-        - name: DbSource
-          value: $DBSOURCE
-        - name: DbName
-          value: $DBNAME
-        - name: DbUserId
-          value: $DBUSERID
-        - name: DbPassword
-          valueFrom:
-            secretKeyRef:
-              name: contoso-customer-service-sql-password
-              key: contoso-customer-service-sql-password 
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Development
-        - name: AzureAd__Instance
-          value: $AADINSTANCE
-        - name: AzureAd__TenantId
-          value: $AADTENANTID
-        - name: AzureAd__Domain
-          value: $AADDOMAIN
-        - name: AzureAd__ClientId
-          value: $AADCLIENTID
-        - name: AzureAd__Audience
-          value: $AADAUDIENCE
-        - name: AppInsightsInstrumentationKey
-          value: $APPINSIGHTSKEY
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          env:
+            - name: DbSource
+              value: $DBSOURCE
+            - name: DbName
+              value: $DBNAME
+            - name: DbUserId
+              value: $DBUSERID
+            - name: DbPassword
+              valueFrom:
+                secretKeyRef:
+                  name: contoso-customer-service-sql-password
+                  key: contoso-customer-service-sql-password
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: AzureAd__Instance
+              value: $AADINSTANCE
+            - name: AzureAd__TenantId
+              value: $AADTENANTID
+            - name: AzureAd__Domain
+              value: $AADDOMAIN
+            - name: AzureAd__ClientId
+              value: $AADCLIENTID
+            - name: AzureAd__Audience
+              value: $AADAUDIENCE
+            - name: AppInsightsInstrumentationKey
+              value: $APPINSIGHTSKEY
 ---
 apiVersion: v1
 kind: Service
@@ -77,29 +77,29 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
+    - port: 80
   selector:
     app: alternateid
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-    name: alternateid-scaledobject
-    namespace: $NAMESPACE
-    labels:
-        deploymentName: alternateid    
+  name: alternateid-scaledobject
+  namespace: $NAMESPACE
+  labels:
+    deploymentName: alternateid
 spec:
-    scaleTargetRef:
-        name: alternateid
-    pollingInterval: 30
-    cooldownPeriod:  300
-    minReplicaCount: 1
-    maxReplicaCount: 100
-    triggers:
+  scaleTargetRef:
+    name: alternateid
+  pollingInterval: 30
+  cooldownPeriod: 300
+  minReplicaCount: 1
+  maxReplicaCount: 100
+  triggers:
     - type: prometheus
       metadata:
         serverAddress: http://prometheus-server.$NAMESPACE.svc.cluster.local:9090
         metricName: http_requests_total
         threshold: '100'
         query: sum(rate(nginx_ingress_controller_requests{service='alternateid'}[1m]))
-        namespace: $NAMESPACE        
+        namespace: $NAMESPACE

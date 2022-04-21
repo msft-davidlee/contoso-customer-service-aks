@@ -30,7 +30,20 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to verify if aks and acr are connected."
 }
 
-kubectl get services -n myapps
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to list all services"
+$appGw = (az resource list -g $resourceGroupName --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json)[0]
+if ($appGw) {
+
+    az extension add --name aks-preview
+
+    $isInstalled = az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName
+    if (!$isInstalled) {
+        az aks enable-addons -n $aksName -g $resourceGroupName -a ingress-appgw --appgw-id $appGw.id
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to enable Application gateway add-on."
+        }
+    }
+
+    $assignee = (az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName | ConvertFrom-Json).identity.objectId
+    $scope = (az identity list -g $resourceGroupName | ConvertFrom-Json).id 
+    az role assignment create --role "Managed Identity Operator" --assignee $assignee --scope $scope
 }

@@ -29,6 +29,12 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
 }
 $ErrorActionPreference = "Stop"
 
+# This is because the deploy.bicep is using the notation of skip but our powershell script
+# here is not, so we are resetting it.
+if ($EnableApplicationGateway -eq "skip") {
+    $EnableApplicationGateway = "true"
+}
+
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
@@ -36,6 +42,14 @@ $all = GetResource -stackName $STACK_NAME_TAG -stackEnvironment $BUILD_ENV
 $aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClusters' }
 $AKS_RESOURCE_GROUP = $aks.resourceGroup
 $AKS_NAME = $aks.name
+
+$acr = GetResource -stackName shared-container-registry -stackEnvironment prod
+$acrName = $acr.Name
+
+az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io"
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+}
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
@@ -56,8 +70,7 @@ $AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-client
 $AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-client-secret --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AAD_AUDIENCE = (az keyvault secret show -n contoso-customer-service-aad-app-audience --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --vault-name $KeyVaultName --query value | ConvertFrom-Json)
-$acr = GetResource -stackName shared-container-registry -stackEnvironment prod
-$acrName = $acr.Name
+
 
 $log = $all | Where-Object { $_.type -eq 'microsoft.insights/components' }
 az extension add --name application-insights
@@ -107,19 +120,20 @@ else {
 
 # Step 4: Setup an external ingress controller
 $repoList = helm repo list --output json | ConvertFrom-Json
-$foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1
 
-# Step 4a: Add the ingress-nginx repository
-if (!$foundHelmIngressRepo ) {
-    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-}
-else {
-    Write-Host "Skip adding ingress-nginx repo with helm as it already exist."
+if ($EnableApplicationGateway -ne "true") {
+
+    # Step 4a: Add the ingress-nginx repository
+    $foundHelmIngressRepo = ($repoList | Where-Object { $_.name -eq "ingress-nginx" }).Count -eq 1    
+    if (!$foundHelmIngressRepo ) {
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx   
+    }
+    else {
+        Write-Host "Skip adding ingress-nginx repo with helm as it already exist."
+    }
 }
 
 $foundHelmKedaCoreRepo = ($repoList | Where-Object { $_.name -eq "kedacore" }).Count -eq 1
-
-# Step 4a: Add the ingress-nginx repository
 if (!$foundHelmKedaCoreRepo) {
     helm repo add kedacore https://kedacore.github.io/charts
 }
@@ -158,20 +172,28 @@ if (!$testSecret) {
     }
 }
 
-# Step 4c. Install ingress controller
-# See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
-
 if ($EnableApplicationGateway -eq "true") {
 
-    Write-Host "Configure ingress for app gateway."
+    # Step 4c. Check if Application Gateway Ingress Controller (AGIC) using add-on method is installed.
+    az extension add --name aks-preview
 
-    helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-        --set controller.replicaCount=2 `
-        --set controller.metrics.enabled=true `
-        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+    $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
+    
+    if (!$isInstalled) {        
+        throw "An error has occured. Unable to verify Application gateway add-on is installed on AKS Cluster. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+    }
+    else {
+        Write-Host "Perfect, application gateway add-on is already installed."
+    }
+
+    # Install this to test endpoint.
+    kubectl apply -f ./Deployment/aspnetapp.yaml --namespace $namespace
 }
 else {
+
+    # Step 4c. Install ingress controller
+    # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
+
     # Public IP is assigned only for Prod which we will reuse.
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
@@ -199,40 +221,6 @@ helm install keda kedacore/keda -n $namespace
 #     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
 # }
 # else {
-
-if ($EnableApplicationGateway -eq "true") {
-    $content = Get-Content .\Deployment\external-ingress-agw.yaml
-}
-else {
-    $content = Get-Content .\Deployment\external-ingress.yaml
-}
-
-$content = $content.Replace('$NAMESPACE', $namespace)
-$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
-$content = $content.Replace('$API_DOMAIN', $apiDomain)
-$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
-#}
-
-# Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
-$content = $content.Replace('$NAMESPACE', $namespace)
-Set-Content -Path ".\external-ingress.yaml" -Value $content
-$rawOut = (kubectl apply -f .\external-ingress.yaml --namespace $namespace 2>&1)
-if ($LastExitCode -ne 0) {
-    $errorMsg = $rawOut -Join '`n'
-    if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
-        Write-Host "Attempting to recover from 'failed calling webhook' error."
-
-        # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
-        kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
-        kubectl apply -f .\external-ingress.yaml --namespace $namespace
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to deploy external ingress."
-        }
-    }
-    else {
-        throw "An error has occured. Unable to deploy external ingress. $errorMsg "
-    }    
-}
 
 # Step 5: Setup configuration for resources
 
@@ -504,66 +492,47 @@ if ($QueueType -eq "Storage") {
     }
 }
 
-# Step 12: Output ip address
-$serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
-Write-Host "::set-output name=serviceip::$serviceip"
-
+# Last step: Setup ingress
 if ($EnableApplicationGateway -eq "true") {
+    Write-Host "Using yaml for application gateway ingress controller."
+    $content = Get-Content .\Deployment\external-ingress-agw.yaml
+}
+else {
+    $content = Get-Content .\Deployment\external-ingress.yaml
+}
 
-    $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
+$content = $content.Replace('$NAMESPACE', $namespace)
+$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
+$content = $content.Replace('$API_DOMAIN', $apiDomain)
+$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
+#}
 
-    $allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV    
-    $vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }            
-    $vnetName = $vnet.name
-    $vnetRg = $vnet.resourceGroup
-    $location = $vnet.location
+# Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\external-ingress.yaml" -Value $content
+$rawOut = (kubectl apply -f .\external-ingress.yaml --namespace $namespace 2>&1)
+if ($LastExitCode -ne 0) {
+    $errorMsg = $rawOut -Join '`n'
+    if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
+        Write-Host "Attempting to recover from 'failed calling webhook' error."
 
-    $subnets = (az network vnet subnet list -g $vnetRg --vnet-name $vnetName | ConvertFrom-Json)
-    if (!$subnets) {
-        throw "Unable to find eligible Subnets from Virtual Network $vnetName!"
-    }          
-    $subnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
-    if (!$subnetId) {
-        throw "Unable to find appgw Subnet resource!"
-    }
-
-    if (!$appGwId) {
-
-        # Public IP is assigned only for Prod which we will reuse.
-        $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-    
-        az network application-gateway create -n $AKS_NAME -l $Location -g $AKS_RESOURCE_GROUP --sku Standard_v2 `
-            --public-ip-address $pipRes.id `
-            --vnet-name $vnet.id `
-            --subnet $subnetId
-
+        # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
+        kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
+        kubectl apply -f .\external-ingress.yaml --namespace $namespace
         if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to create Application gateway."
-        }
-
-        $appGwId = (az network application-gateway show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "id")
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to create Application gateway Id."
+            throw "An error has occured. Unable to deploy external ingress."
         }
     }
+    else {
+        throw "An error has occured. Unable to deploy external ingress. $errorMsg "
+    }    
+}
+else {
+    Write-Host "Applied ingress config for ingress controller."
+}
 
-    $nodeResourceGroup = az aks show -n $AKS_NAME -g $AKS_RESOURCE_GROUP -o tsv --query "nodeResourceGroup"
-    $routeTableId = az network route-table list -g $nodeResourceGroup --query "[].id | [0]" -o tsv
-
-    # https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/
-    az network vnet subnet update --ids $subnetId --route-table $routeTableId
-    if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to associate route table onto app gw subnet."
-    }
-
-    az extension add --name aks-preview
-
-    $isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
-
-    if (!$isInstalled) {
-        az aks enable-addons -n $AKS_NAME -g $AKS_RESOURCE_GROUP -a ingress-appgw --appgw-id $appGwId
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to enable Application gateway add-on."
-        }
-    }
+if ($EnableApplicationGateway -ne "true") {
+    # Step 12: Output ip address
+    $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+    Write-Host "::set-output name=serviceip::$serviceip"
 }

@@ -1,11 +1,13 @@
 on:
   push:
     paths-ignore:
-      - "README.md"
+      - 'README.md'
+      - 'CompleteSetup.ps1'
+      - 'FixApplicationGatewayRoute.ps1'
   workflow_dispatch:
     inputs:
       environmentselector:
-        description: "Environment selector"
+        description: 'Environment selector'
         required: false
 env:
   APP_VERSION: 'v5.1'
@@ -66,7 +68,7 @@ jobs:
         id: deploy
         uses: azure/arm-deploy@v1
         with:
-          deploymentName: "deploy-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}"
+          deploymentName: 'deploy-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}'
           resourceGroupName: ${{ steps.resolve-shared-resources.outputs.appResourceGroup }}
           template: ./deployment/deploy.bicep
           parameters: >
@@ -85,11 +87,14 @@ jobs:
             backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             storageQueueSuffix=${{ env.STORAGE_QUEUE_SUFFIX }}
             stackNameTag=${{ env.STACK_NAME_TAG }}
+            publicIPResId=${{ steps.resolve-shared-resources.outputs.pipResId }}
+            enableAppGateway=${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
+            appGwSubnetId=${{ steps.resolve-shared-resources.outputs.appGwSubnetId }}
     outputs:
       managedIdentityId: ${{ steps.deploy.outputs.managedIdentityId }}
       queueName: ${{ steps.deploy.outputs.queueName }}
       queueType: ${{ steps.resolve-shared-resources.outputs.queueType }}
-      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }} 
+      enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
 
   deploy_apps:
     name: Deploy apps
@@ -123,7 +128,7 @@ jobs:
 
   deploy_db:
     name: Deploy database
-    needs:    
+    needs:
       - setup
       - cd_deploy
     runs-on: windows-latest
@@ -159,7 +164,7 @@ jobs:
         uses: azure/sql-action@v1.2
         with:
           connection-string: ${{ steps.resolve-sql-connectionstring.outputs.sqlConnectionString }}
-          sql-file: ${{ steps.resolve-sql-connectionstring.outputs.sqlFile }}         
+          sql-file: ${{ steps.resolve-sql-connectionstring.outputs.sqlFile }}
 
   cleanup:
     name: Clean up

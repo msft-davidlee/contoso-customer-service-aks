@@ -6,18 +6,18 @@ metadata:
 spec:
   provider: azure
   secretObjects:
-  - secretName: contoso-customer-service-sql-password # name given to our kubernetes secret
-    type: Opaque
-    data:
-    - objectName: contoso-customer-service-sql-password # must match objectName below
-      key: contoso-customer-service-sql-password # this can be called what you want, this is to reference  
+    - secretName: contoso-customer-service-sql-password # name given to our kubernetes secret
+      type: Opaque
+      data:
+        - objectName: contoso-customer-service-sql-password # must match objectName below
+          key: contoso-customer-service-sql-password # this can be called what you want, this is to reference
   parameters:
-    usePodIdentity: "false"
-    useVMManagedIdentity: "true"          # Set to true for using managed identity
-    userAssignedIdentityID: $MANAGEDID    # Set the clientID of the user-assigned managed identity to use
-    keyvaultName: $KEYVAULTNAME           # Set to the name of your key vault
-    cloudName: ""                         # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
-    objects:  |
+    usePodIdentity: 'false'
+    useVMManagedIdentity: 'true' # Set to true for using managed identity
+    userAssignedIdentityID: $MANAGEDID # Set the clientID of the user-assigned managed identity to use
+    keyvaultName: $KEYVAULTNAME # Set to the name of your key vault
+    cloudName: '' # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
+    objects: |
       array:
         - |
           objectName: contoso-customer-service-sql-password
@@ -27,4 +27,4 @@ spec:
           objectName: contoso-customer-service-aad-tenant-id
           objectType: secret
           objectVersion: ""
-    tenantId: $TENANTID                 # The tenant ID of the key vault
+    tenantId: $TENANTID # The tenant ID of the key vault

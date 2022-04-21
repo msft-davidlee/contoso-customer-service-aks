@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: servicebustrigger-dotfile-secret
   labels:
-    app: backendservice  
+    app: backendservice
 data:
   servicebus-connectionstring: $BASE64CONNECTIONSTRING
 ---
@@ -13,9 +13,9 @@ metadata:
   name: azure-servicebus-auth
 spec:
   secretTargetRef:
-  - parameter: connection
-    name: servicebustrigger-dotfile-secret
-    key: servicebus-connectionstring
+    - parameter: connection
+      name: servicebustrigger-dotfile-secret
+      key: servicebus-connectionstring
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -25,13 +25,13 @@ spec:
   scaleTargetRef:
     name: backendservice
   pollingInterval: 30
-  cooldownPeriod:  300
+  cooldownPeriod: 300
   minReplicaCount: 1
-  maxReplicaCount: 50    
+  maxReplicaCount: 50
   triggers:
-  - type: azure-servicebus
-    metadata:      
-      queueName: $QUEUENAME
-      messageCount: '50'
-    authenticationRef:
+    - type: azure-servicebus
+      metadata:
+        queueName: $QUEUENAME
+        messageCount: '50'
+      authenticationRef:
         name: azure-servicebus-auth

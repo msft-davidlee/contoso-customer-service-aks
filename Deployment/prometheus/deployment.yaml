@@ -20,6 +20,14 @@ spec:
               mountPath: /etc/prometheus/
             - name: prometheus-storage-volume
               mountPath: /prometheus/
+          livenessProbe:
+            httpGet:
+              path: /graph
+              port: 9090
+          readinessProbe:
+            httpGet:
+              path: /graph
+              port: 9090
       volumes:
         - name: prometheus-config-volume
           configMap:

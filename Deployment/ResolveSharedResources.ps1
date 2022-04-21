@@ -39,6 +39,9 @@ if (!$subnetId) {
 }
 Write-Host "::set-output name=subnetId::$subnetId"
 
+$appGwSubnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
+Write-Host "::set-output name=appGwSubnetId::$appGwSubnetId"
+
 $kv = GetResource -stackName shared-key-vault -stackEnvironment prod
 $kvName = $kv.name
 Write-Host "::set-output name=keyVaultName::$kvName"
@@ -82,6 +85,14 @@ $EnableApplicationGateway = (az appconfig kv show -n $configName --key "$StackNa
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-application gateway flag  from $configName."
 }
+# Does an existing app gw already exist? If it does, don't do a deployment as it might
+# cause the settings to be reset as settings are managed via AGIC.
+if ($EnableApplicationGateway -eq "true") {
+    $exist = (az resource list -g $appResourceGroup --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json).Length
+    if ($exist -eq 1) {
+        $EnableApplicationGateway = "skip"
+    }
+}
 Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
 
 $certDomainNamesJson = (az appconfig kv show -n $configName --key "$StackNameTag/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
@@ -104,3 +115,7 @@ $memberPortalDomain = $certDomainNames.memberPortal
 Write-Host "::set-output name=customerServiceHostName::$customerServiceDomain"
 Write-Host "::set-output name=apiHostName::$apiDomain"
 Write-Host "::set-output name=memberHostName::$memberPortalDomain"
+
+$pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+$pipResId = $pipRes.id
+Write-Host "::set-output name=pipResId::$pipResId"
