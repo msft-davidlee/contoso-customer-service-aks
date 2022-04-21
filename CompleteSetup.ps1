@@ -42,4 +42,8 @@ if ($appGw) {
             throw "An error has occured. Unable to enable Application gateway add-on."
         }
     }
+
+    $assignee = (az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName | ConvertFromJson).identity.objectId
+    $scope = (az identity list -g $resourceGroupName | ConvertFrom-Json).id 
+    az role assignment create --role "Managed Identity Operator" --assignee $assignee --scope $scope
 }
