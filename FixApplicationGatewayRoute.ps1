@@ -9,7 +9,7 @@ $resourceGroupName = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' -a
 $appGw = (az resource list -g $resourceGroupName --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json)[0]
 if ($appGw) {
 
-    $rules = az network application-gateway rule list --gateway-name $appGw.name --g $appGw.resourceGroup | ConvertFrom-Json
+    $rules = (az network application-gateway rule list --gateway-name $appGw.name --g $resourceGroupName) | ConvertFrom-Json
     $rules | ForEach-Object {
         $_.name
     }
