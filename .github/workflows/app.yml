@@ -43,7 +43,9 @@ jobs:
 
   cd_deploy:
     name: Deploy Azure Environment
-    needs: setup
+    needs:
+      - setup
+      - cleanup
     environment: ${{ needs.setup.outputs.build_env }}
     runs-on: windows-latest
     steps:
@@ -100,6 +102,7 @@ jobs:
     name: Deploy apps
     needs:
       - setup
+      - cleanup
       - cd_deploy
     runs-on: windows-latest
     environment: dev
@@ -130,6 +133,7 @@ jobs:
     name: Deploy database
     needs:
       - setup
+      - cleanup
       - cd_deploy
     runs-on: windows-latest
     environment: dev
@@ -183,4 +187,4 @@ jobs:
       - id: removedevresources
         name: Remove Dev Resources
         run: |
-          .\Deployment\RemoveDevResources.ps1 -StackNameTag ${{ env.STACK_NAME_TAG }}
+          .\Deployment\RemoveDevResources.ps1 -StackNameTag ${{ env.STACK_NAME_TAG }} -BUILD_ENV ${{ needs.setup.outputs.build_env }}
