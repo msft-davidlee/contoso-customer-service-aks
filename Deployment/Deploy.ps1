@@ -46,6 +46,10 @@ $AKS_NAME = $aks.name
 $acr = GetResource -stackName shared-container-registry -stackEnvironment prod
 $acrName = $acr.Name
 
+# Step 2: Login to AKS.
+az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
+Write-Host "::set-output name=aksName::$AKS_NAME"
+
 az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io"
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
@@ -105,9 +109,6 @@ if (!$memberPortalDomain) {
     throw "Unable to get Member Portal Domain"
 }
 
-# Step 2: Login to AKS.
-az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
-Write-Host "::set-output name=aksName::$AKS_NAME"
 # Step 3: Create a namespace for your resources if it does not exist.
 $namespace = "myapps"
 $testNamespace = kubectl get namespace $namespace
