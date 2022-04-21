@@ -10,8 +10,7 @@ $appGw = (az resource list -g $resourceGroupName --resource-type "Microsoft.Netw
 if ($appGw) {
 
     $rules = (az network application-gateway rule list --gateway-name $appGw.name -g $resourceGroupName) | ConvertFrom-Json
-    $rules | ForEach-Object {
-        $_.name
-        $_
+    $rules | ForEach-Object {        
+        $_.urlPathMap
     }
 }
