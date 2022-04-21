@@ -85,6 +85,14 @@ $EnableApplicationGateway = (az appconfig kv show -n $configName --key "$StackNa
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-application gateway flag  from $configName."
 }
+# Does an existing app gw already exist? If it does, don't do a deployment as it might
+# cause the settings to be reset as settings are managed via AGIC.
+if ($EnableApplicationGateway -eq "true") {
+    $exist = (az resource list -g $appResourceGroup --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json).Length
+    if ($exist -eq 1) {
+        $EnableApplicationGateway = "false"
+    }
+}
 Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
 
 $certDomainNamesJson = (az appconfig kv show -n $configName --key "$StackNameTag/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
