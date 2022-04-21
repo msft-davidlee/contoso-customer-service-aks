@@ -90,7 +90,7 @@ if ($LastExitCode -ne 0) {
 if ($EnableApplicationGateway -eq "true") {
     $exist = (az resource list -g $appResourceGroup --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json).Length
     if ($exist -eq 1) {
-        $EnableApplicationGateway = "false"
+        $EnableApplicationGateway = "skip"
     }
 }
 Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
