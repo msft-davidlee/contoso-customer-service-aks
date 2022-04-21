@@ -3,6 +3,7 @@ on:
     paths-ignore:
       - 'README.md'
       - 'CompleteSetup.ps1'
+      - 'FixApplicationGatewayRoute.ps1'
   workflow_dispatch:
     inputs:
       environmentselector:
