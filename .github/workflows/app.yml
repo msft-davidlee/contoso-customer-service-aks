@@ -187,4 +187,4 @@ jobs:
       - id: removedevresources
         name: Remove Dev Resources
         run: |
-          .\Deployment\RemoveDevResources.ps1 -StackNameTag ${{ env.STACK_NAME_TAG }} -BUILD_ENV ${{ needs.setup.outputs.build_env }}
+          .\Deployment\RemoveDevResources.ps1 -StackNameTag ${{ env.STACK_NAME_TAG }}
