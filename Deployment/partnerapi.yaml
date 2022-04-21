@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: partnerapi-dotfile-secret
 data:
-  .secret-conn-file: "$BASE64CONNECTIONSTRING"
+  .secret-conn-file: '$BASE64CONNECTIONSTRING'
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -20,66 +20,66 @@ spec:
         app: partnerapi
     spec:
       volumes:
-      - name: secret-volume
-        secret:
-          secretName: partnerapi-dotfile-secret
-      - name: secrets-store-partnerapi
-        csi:
-          driver: secrets-store.csi.k8s.io
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "azure-kvname-podid"
+        - name: secret-volume
+          secret:
+            secretName: partnerapi-dotfile-secret
+        - name: secrets-store-partnerapi
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: 'azure-kvname-podid'
       containers:
-      - name: partnerapi
-        image: $ACRNAME.azurecr.io/contoso-demo-partner-api:$VERSION
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 250m
-            memory: 256Mi
-        ports:
-        - containerPort: 80
-        volumeMounts:
+        - name: partnerapi
+          image: $ACRNAME.azurecr.io/contoso-demo-partner-api:$VERSION
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+          volumeMounts:
             - name: secret-volume
               readOnly: true
-              mountPath: "/etc/secret-volume"
+              mountPath: '/etc/secret-volume'
             - name: secrets-store-partnerapi
-              mountPath: "/mnt/secrets-store"
+              mountPath: '/mnt/secrets-store'
               readOnly: true
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80              
-        env:
-        - name: AppInsightsInstrumentationKey
-          value: $APPINSIGHTSKEY        
-        - name: DbSource
-          value: $DBSOURCE
-        - name: DbName
-          value: $DBNAME
-        - name: DbUserId
-          value: $DBUSERID
-        - name: DbPassword
-          valueFrom:
-            secretKeyRef:
-              name: contoso-customer-service-sql-password
-              key: contoso-customer-service-sql-password
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Development
-        - name: QueueConnectionString
-          value: FilePath=/etc/secret-volume/.secret-conn-file
-        - name: QueueName
-          value: orders
-        - name: ShippingRepositoryType
-          value: $SHIPPINGREPOSITORYTYPE
-        - name: DisableQueueDelay
-          value: "true"       
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          env:
+            - name: AppInsightsInstrumentationKey
+              value: $APPINSIGHTSKEY
+            - name: DbSource
+              value: $DBSOURCE
+            - name: DbName
+              value: $DBNAME
+            - name: DbUserId
+              value: $DBUSERID
+            - name: DbPassword
+              valueFrom:
+                secretKeyRef:
+                  name: contoso-customer-service-sql-password
+                  key: contoso-customer-service-sql-password
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: QueueConnectionString
+              value: FilePath=/etc/secret-volume/.secret-conn-file
+            - name: QueueName
+              value: orders
+            - name: ShippingRepositoryType
+              value: $SHIPPINGREPOSITORYTYPE
+            - name: DisableQueueDelay
+              value: 'true'
 ---
 apiVersion: v1
 kind: Service
@@ -88,25 +88,25 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
+    - port: 80
   selector:
     app: partnerapi
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-    name: partnerapi-scaledobject
-    namespace: $NAMESPACE
-    labels:
-        deploymentName: partnerapi    
+  name: partnerapi-scaledobject
+  namespace: $NAMESPACE
+  labels:
+    deploymentName: partnerapi
 spec:
-    scaleTargetRef:
-        name: partnerapi
-    pollingInterval: 30
-    cooldownPeriod:  300
-    minReplicaCount: 1
-    maxReplicaCount: 100
-    triggers:
+  scaleTargetRef:
+    name: partnerapi
+  pollingInterval: 30
+  cooldownPeriod: 300
+  minReplicaCount: 1
+  maxReplicaCount: 100
+  triggers:
     - type: prometheus
       metadata:
         serverAddress: http://prometheus-server.$NAMESPACE.svc.cluster.local:9090

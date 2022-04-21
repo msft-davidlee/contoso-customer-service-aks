@@ -13,62 +13,62 @@ spec:
         app: pointsservice
     spec:
       volumes:
-      - name: secrets-store-pointsservice
-        csi:
-          driver: secrets-store.csi.k8s.io
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "azure-kvname-podid"
+        - name: secrets-store-pointsservice
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: 'azure-kvname-podid'
       containers:
-      - name: pointsservice
-        image: $ACRNAME.azurecr.io/contoso-demo-member-points-service:$VERSION
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 250m
-            memory: 256Mi
-        ports:
-        - containerPort: 80
-        volumeMounts:
+        - name: pointsservice
+          image: $ACRNAME.azurecr.io/contoso-demo-member-points-service:$VERSION
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+          volumeMounts:
             - name: secrets-store-pointsservice
-              mountPath: "/mnt/secrets-store"
+              mountPath: '/mnt/secrets-store'
               readOnly: true
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80              
-        env:
-        - name: AppInsightsInstrumentationKey
-          value: $APPINSIGHTSKEY        
-        - name: DbSource
-          value: $DBSOURCE
-        - name: DbName
-          value: $DBNAME
-        - name: DbUserId
-          value: $DBUSERID
-        - name: DbPassword
-          valueFrom:
-            secretKeyRef:
-              name: contoso-customer-service-sql-password
-              key: contoso-customer-service-sql-password      
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Development
-        - name: AzureAd__Instance
-          value: $AADINSTANCE
-        - name: AzureAd__TenantId
-          value: $AADTENANTID
-        - name: AzureAd__Domain
-          value: $AADDOMAIN
-        - name: AzureAd__ClientId
-          value: $AADCLIENTID
-        - name: AzureAd__Audience
-          value: $AADAUDIENCE              
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          env:
+            - name: AppInsightsInstrumentationKey
+              value: $APPINSIGHTSKEY
+            - name: DbSource
+              value: $DBSOURCE
+            - name: DbName
+              value: $DBNAME
+            - name: DbUserId
+              value: $DBUSERID
+            - name: DbPassword
+              valueFrom:
+                secretKeyRef:
+                  name: contoso-customer-service-sql-password
+                  key: contoso-customer-service-sql-password
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: AzureAd__Instance
+              value: $AADINSTANCE
+            - name: AzureAd__TenantId
+              value: $AADTENANTID
+            - name: AzureAd__Domain
+              value: $AADDOMAIN
+            - name: AzureAd__ClientId
+              value: $AADCLIENTID
+            - name: AzureAd__Audience
+              value: $AADAUDIENCE
 ---
 apiVersion: v1
 kind: Service
@@ -77,29 +77,29 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
+    - port: 80
   selector:
     app: pointsservice
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-    name: pointsservice-scaledobject
-    namespace: $NAMESPACE
-    labels:
-        deploymentName: pointsservice    
+  name: pointsservice-scaledobject
+  namespace: $NAMESPACE
+  labels:
+    deploymentName: pointsservice
 spec:
-    scaleTargetRef:
-        name: pointsservice
-    pollingInterval: 30
-    cooldownPeriod:  300
-    minReplicaCount: 1
-    maxReplicaCount: 100
-    triggers:
+  scaleTargetRef:
+    name: pointsservice
+  pollingInterval: 30
+  cooldownPeriod: 300
+  minReplicaCount: 1
+  maxReplicaCount: 100
+  triggers:
     - type: prometheus
       metadata:
         serverAddress: http://prometheus-server.$NAMESPACE.svc.cluster.local:9090
         metricName: http_requests_total
         threshold: '100'
         query: sum(rate(nginx_ingress_controller_requests{service='pointsservice'}[1m]))
-        namespace: $NAMESPACE       
+        namespace: $NAMESPACE

@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: storagetrigger-dotfile-secret
 data:
-  .secret-conn-file: "$BASE64CONNECTIONSTRING"
+  .secret-conn-file: '$BASE64CONNECTIONSTRING'
 ---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
@@ -11,26 +11,26 @@ metadata:
   name: azure-queue-auth
 spec:
   secretTargetRef:
-  - parameter: connection
-    name: storagetrigger-dotfile-secret
-    key: .secret-conn-file
+    - parameter: connection
+      name: storagetrigger-dotfile-secret
+      key: .secret-conn-file
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: backendservice-queue-scaledobject  
+  name: backendservice-queue-scaledobject
 spec:
   scaleTargetRef:
     name: backendservice
   pollingInterval: 30
-  cooldownPeriod:  300
+  cooldownPeriod: 300
   minReplicaCount: 1
   maxReplicaCount: 50
   triggers:
-  - type: azure-queue
-    metadata:
-      queueName: $QUEUENAME
-      accountName: $STORAGEACCOUNTNAME
-      queueLength: "50"
-    authenticationRef:
+    - type: azure-queue
+      metadata:
+        queueName: $QUEUENAME
+        accountName: $STORAGEACCOUNTNAME
+        queueLength: '50'
+      authenticationRef:
         name: azure-queue-auth

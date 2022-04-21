@@ -216,44 +216,6 @@ helm install keda kedacore/keda -n $namespace
 # }
 # else {
 
-if ($EnableApplicationGateway -eq "true") {
-    Write-Host "Using yaml for application gateway ingress controller."
-    $content = Get-Content .\Deployment\external-ingress-agw.yaml
-}
-else {
-    $content = Get-Content .\Deployment\external-ingress.yaml
-}
-
-$content = $content.Replace('$NAMESPACE', $namespace)
-$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
-$content = $content.Replace('$API_DOMAIN', $apiDomain)
-$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
-#}
-
-# Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
-$content = $content.Replace('$NAMESPACE', $namespace)
-Set-Content -Path ".\external-ingress.yaml" -Value $content
-$rawOut = (kubectl apply -f .\external-ingress.yaml --namespace $namespace 2>&1)
-if ($LastExitCode -ne 0) {
-    $errorMsg = $rawOut -Join '`n'
-    if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
-        Write-Host "Attempting to recover from 'failed calling webhook' error."
-
-        # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
-        kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
-        kubectl apply -f .\external-ingress.yaml --namespace $namespace
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to deploy external ingress."
-        }
-    }
-    else {
-        throw "An error has occured. Unable to deploy external ingress. $errorMsg "
-    }    
-}
-else {
-    Write-Host "Applied ingress config for ingress controller."
-}
-
 # Step 5: Setup configuration for resources
 
 if ($QueueType -eq "ServiceBus") { 
@@ -522,6 +484,45 @@ if ($QueueType -eq "Storage") {
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to deploy storage keda scaler."
     }
+}
+
+# Last step: Setup ingress
+if ($EnableApplicationGateway -eq "true") {
+    Write-Host "Using yaml for application gateway ingress controller."
+    $content = Get-Content .\Deployment\external-ingress-agw.yaml
+}
+else {
+    $content = Get-Content .\Deployment\external-ingress.yaml
+}
+
+$content = $content.Replace('$NAMESPACE', $namespace)
+$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
+$content = $content.Replace('$API_DOMAIN', $apiDomain)
+$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
+#}
+
+# Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\external-ingress.yaml" -Value $content
+$rawOut = (kubectl apply -f .\external-ingress.yaml --namespace $namespace 2>&1)
+if ($LastExitCode -ne 0) {
+    $errorMsg = $rawOut -Join '`n'
+    if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
+        Write-Host "Attempting to recover from 'failed calling webhook' error."
+
+        # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
+        kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
+        kubectl apply -f .\external-ingress.yaml --namespace $namespace
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to deploy external ingress."
+        }
+    }
+    else {
+        throw "An error has occured. Unable to deploy external ingress. $errorMsg "
+    }    
+}
+else {
+    Write-Host "Applied ingress config for ingress controller."
 }
 
 if ($EnableApplicationGateway -ne "true") {
