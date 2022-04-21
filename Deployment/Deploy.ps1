@@ -29,6 +29,12 @@ function GetResource([string]$stackName, [string]$stackEnvironment) {
 }
 $ErrorActionPreference = "Stop"
 
+# This is because the deploy.bicep is using the notation of skip but our powershell script
+# here is not, so we are resetting it.
+if ($EnableApplicationGateway -eq "skip") {
+    $EnableApplicationGateway = "true"
+}
+
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
