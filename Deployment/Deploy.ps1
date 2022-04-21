@@ -358,7 +358,13 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 7: Deploy customer service app.
-$content = Get-Content .\Deployment\customerservice.yaml
+if ($EnableApplicationGateway -eq "true") {
+    $content = Get-Content .\Deployment\customerserviceagw.yaml    
+}
+else {
+    $content = Get-Content .\Deployment\customerservice.yaml
+}
+
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
@@ -423,7 +429,12 @@ if ($LastExitCode -ne 0) {
 }
 
 # Step 10: Deploy Member service.
-$content = Get-Content .\Deployment\memberservice.yaml
+if ($EnableApplicationGateway -eq "true") {
+    $content = Get-Content .\Deployment\memberserviceagw.yaml
+}
+else {
+    $content = Get-Content .\Deployment\memberservice.yaml
+}
 $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
