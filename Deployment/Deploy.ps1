@@ -59,6 +59,9 @@ if ($LastExitCode -ne 0) {
 if ($allMessage.Contains("FAILED")) {
     throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
 }
+else {
+    $allMessage
+}
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
