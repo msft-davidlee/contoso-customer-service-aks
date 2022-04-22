@@ -49,7 +49,7 @@ $acrName = $acr.Name
 $allMessages = (az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io" 2>&1)
 $allMessage = $allMessages -Join '`n'
 Write-Host $allMessage
-$acrErr = throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+$acrErr = "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
 if ($LastExitCode -ne 0) {
     throw $acrErr
 }
@@ -63,7 +63,7 @@ else {
 
 $count = ($allMessage | Select-String -Pattern "SUCCEEDED" -AllMatches).Matches.Count
 if ($count -ne 3) {
-    Write-Host "Count = $count"
+    Write-Host "SUCCEEDED Count = $count"
     throw $acrErr
 }
 
