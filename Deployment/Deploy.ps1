@@ -48,15 +48,22 @@ $acrName = $acr.Name
 
 $allMessages = (az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io" 2>&1)
 $allMessage = $allMessages -Join '`n'
+Write-Host $allMessage
+$acrErr = throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
 if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+    throw $acrErr
 }
 
 if ($allMessage.ToUpper().Contains("FAILED")) {
-    throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+    throw $acrErr
 }
 else {
     Write-Host $allMessage
+}
+
+$count = ($allMessage | Select-String -Pattern "SUCCEEDED" -AllMatches).Matches.Count
+if ($count -ne 3) {
+    throw $acrErr
 }
 
 # Step 2: Login to AKS.
