@@ -46,10 +46,6 @@ $AKS_NAME = $aks.name
 $acr = GetResource -stackName shared-container-registry -stackEnvironment prod
 $acrName = $acr.Name
 
-# Step 2: Login to AKS.
-az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
-Write-Host "::set-output name=aksName::$AKS_NAME"
-
 $allMessages = (az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io" 2>&1)
 $allMessage = $allMessages -Join '`n'
 if ($LastExitCode -ne 0) {
@@ -62,6 +58,10 @@ if ($allMessage.ToUpper().Contains("FAILED")) {
 else {
     Write-Host $allMessage
 }
+
+# Step 2: Login to AKS.
+az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
+Write-Host "::set-output name=aksName::$AKS_NAME"
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
@@ -193,9 +193,6 @@ if ($EnableApplicationGateway -eq "true") {
     else {
         Write-Host "Perfect, application gateway add-on is already installed."
     }
-
-    # Install this to test endpoint.
-    kubectl apply -f ./Deployment/aspnetapp.yaml --namespace $namespace
 }
 else {
 
@@ -203,6 +200,7 @@ else {
     # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 
     # Public IP is assigned only for Prod which we will reuse.
+    # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
     $ip = $pip.ipAddress    
@@ -219,6 +217,7 @@ else {
         --set controller.nodeSelector."kubernetes\.io/os"=linux `
         --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
         --set controller.metrics.enabled=true `
+        --set rbac.create=false `
         --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
         --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 }
@@ -531,8 +530,7 @@ if ($LastExitCode -ne 0) {
     }    
 }
 else {
-    Write-Host "Applied ingress config. See logs:"
-    Write-Host $rawOut
+    Write-Host "Applied ingress config."    
 }
 
 if ($EnableApplicationGateway -ne "true") {
