@@ -520,7 +520,7 @@ if ($LastExitCode -ne 0) {
 
         # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
         kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
-        kubectl apply -f .\external-ingress.yaml --namespace $namespace
+        kubectl apply -f .\ingress.yaml --namespace $namespace
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to deploy external ingress."
         }
