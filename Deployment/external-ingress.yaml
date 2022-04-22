@@ -12,64 +12,64 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffers-number: '4'
 spec:
   tls:
-  - hosts:
-    - $CUSTOMER_SERVICE_DOMAIN
-    secretName: aks-csv-tls
-  - hosts:
-    - $API_DOMAIN
-    secretName: aks-api-tls
-  - hosts:
-    - $MEMBER_PORTAL_DOMAIN
-    secretName: aks-mem-tls
+    - hosts:
+        - $CUSTOMER_SERVICE_DOMAIN
+      secretName: aks-csv-tls
+    - hosts:
+        - $API_DOMAIN
+      secretName: aks-api-tls
+    - hosts:
+        - $MEMBER_PORTAL_DOMAIN
+      secretName: aks-mem-tls
   rules:
-  - host: $CUSTOMER_SERVICE_DOMAIN
-    http:
-      paths:
-      - backend:
-          service:
-            name: customerservice
-            port:
-              number: 80
-        path: /(.*)
-        pathType: Prefix
-  - host: $API_DOMAIN
-    http:
-      paths:
-      - backend:
-          service:
-            name: prometheus-server
-            port:
-              number: 9090
-        path: /(.*)
-        pathType: Prefix
-      - backend:
-          service:
-            name: memberservice
-            port:
-              number: 80
-        path: /members/(.*)
-        pathType: Prefix
-      - backend:
-          service:
-            name: pointsservice
-            port:
-              number: 80
-        path: /points/(.*)
-        pathType: Prefix
-      - backend:
-          service:
-            name: partnerapi
-            port:
-              number: 80
-        path: /partner/(.*)
-        pathType: Prefix
-  - host: $MEMBER_PORTAL_DOMAIN
-    http:
-      paths:
-      - backend:
-          service:
-            name: memberportal
-            port:
-              number: 80
-        path: /(.*)
-        pathType: Prefix
+    - host: $CUSTOMER_SERVICE_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: customerservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
+    - host: $API_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: prometheus-server
+                port:
+                  number: 9090
+            path: /(.*)
+            pathType: Prefix
+          - backend:
+              service:
+                name: memberservice
+                port:
+                  number: 80
+            path: /members/(.*)
+            pathType: Prefix
+          - backend:
+              service:
+                name: pointsservice
+                port:
+                  number: 80
+            path: /points/(.*)
+            pathType: Prefix
+          - backend:
+              service:
+                name: partnerapi
+                port:
+                  number: 80
+            path: /partner/(.*)
+            pathType: Prefix
+    - host: $MEMBER_PORTAL_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: memberportal
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
