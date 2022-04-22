@@ -225,11 +225,6 @@ else {
 
 helm install keda kedacore/keda -n $namespace
 
-# if ($EnableFrontdoor) {
-#     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
-# }
-# else {
-
 # Step 5: Setup configuration for resources
 
 if ($QueueType -eq "ServiceBus") { 
@@ -513,7 +508,6 @@ $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
 $content = $content.Replace('$API_DOMAIN', $apiDomain)
 $content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
-#}
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
 $content = $content.Replace('$NAMESPACE', $namespace)
