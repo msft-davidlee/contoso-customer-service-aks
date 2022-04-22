@@ -56,11 +56,11 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
 }
 
-if ($allMessage.Contains("FAILED")) {
+if ($allMessage.ToUpper().Contains("FAILED")) {
     throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
 }
 else {
-    $allMessage
+    Write-Host $allMessage
 }
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }

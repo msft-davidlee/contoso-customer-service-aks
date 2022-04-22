@@ -30,9 +30,10 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to verify if aks and acr are connected."
 }
 
-$appGw = (az resource list -g $resourceGroupName --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json)[0]
-if ($appGw) {
-
+$appGws = (az resource list -g $resourceGroupName --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json)
+if ($appGws -and $appGws.Length -eq 1) {
+    
+    $appGw = $appGws[0]
     az extension add --name aks-preview
 
     $isInstalled = az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName
