@@ -50,8 +50,13 @@ $acrName = $acr.Name
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
 Write-Host "::set-output name=aksName::$AKS_NAME"
 
-az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io"
+$allMessages = (az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io" 2>&1)
+$allMessage = $allMessages -Join '`n'
 if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+}
+
+if ($allMessage.Contains("FAILED")) {
     throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
 }
 
@@ -74,7 +79,6 @@ $AAD_CLIENT_ID = (az keyvault secret show -n contoso-customer-service-aad-client
 $AAD_CLIENT_SECRET = (az keyvault secret show -n contoso-customer-service-aad-client-secret --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AAD_AUDIENCE = (az keyvault secret show -n contoso-customer-service-aad-app-audience --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --vault-name $KeyVaultName --query value | ConvertFrom-Json)
-
 
 $log = $all | Where-Object { $_.type -eq 'microsoft.insights/components' }
 az extension add --name application-insights
