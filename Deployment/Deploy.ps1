@@ -201,25 +201,31 @@ else {
 
     # Public IP is assigned only for Prod which we will reuse.
     # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
-    $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-    $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
-    $ip = $pip.ipAddress    
-    $ipFqdn = "contosocoffeehouseapps"
-    $ipResGroup = $pipRes.resourceGroup
+    # $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
+    # $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
+    # $ip = $pip.ipAddress    
+    # $ipFqdn = "contosocoffeehouseapps"
+    # $ipResGroup = $pipRes.resourceGroup
 
-    Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
+    # Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
+
+    # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+    #     --set controller.replicaCount=2 `
+    #     --set controller.service.loadBalancerIP=$ip `
+    #     --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
+    #     --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
+    #     --set controller.nodeSelector."kubernetes\.io/os"=linux `
+    #     --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
+    #     --set controller.metrics.enabled=true `
+    #     --set rbac.create=false `
+    #     --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+    #     --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 
     helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
         --set controller.replicaCount=2 `
-        --set controller.service.loadBalancerIP=$ip `
-        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
-        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
-        --set controller.nodeSelector."kubernetes\.io/os"=linux `
-        --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
         --set controller.metrics.enabled=true `
-        --set rbac.create=false `
         --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254"        
 }
 
 helm install keda kedacore/keda -n $namespace
