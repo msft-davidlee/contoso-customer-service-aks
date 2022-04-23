@@ -18,7 +18,7 @@ spec:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: 'azure-kvname-podid'
+              secretProviderClass: "azure-kvname-podid"
       containers:
         - name: customerservice
           image: $ACRNAME.azurecr.io/contoso-demo-website:$VERSION
@@ -33,7 +33,7 @@ spec:
             - containerPort: 80
           volumeMounts:
             - name: secrets-store-customerservice
-              mountPath: '/mnt/secrets-store'
+              mountPath: "/mnt/secrets-store"
               readOnly: true
           livenessProbe:
             httpGet:
@@ -66,7 +66,7 @@ spec:
             - name: ASPNETCORE_ENVIRONMENT
               value: Development
             - name: EnableAuth
-              value: 'true'
+              value: "true"
             - name: AzureAd__CallbackPath
               value: /signin-oidc
             - name: AzureAd__Instance
@@ -82,7 +82,7 @@ spec:
             - name: AzureAd__Scopes
               value: $AADSCOPES
             - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
-              value: 'true'
+              value: "true"
 ---
 apiVersion: v1
 kind: Service
@@ -114,6 +114,6 @@ spec:
       metadata:
         serverAddress: http://prometheus-server.$NAMESPACE.svc.cluster.local:9090
         metricName: http_requests_total
-        threshold: '100'
-        query: sum(rate(nginx_ingress_controller_requests{service='customerservice'}[1m]))
+        threshold: "100"
+        query: sum(rate(nginx_ingress_controller_requests{service="customerservice"}[1m]))
         namespace: $NAMESPACE

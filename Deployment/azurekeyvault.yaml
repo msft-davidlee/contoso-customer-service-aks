@@ -12,11 +12,11 @@ spec:
         - objectName: contoso-customer-service-sql-password # must match objectName below
           key: contoso-customer-service-sql-password # this can be called what you want, this is to reference
   parameters:
-    usePodIdentity: 'false'
-    useVMManagedIdentity: 'true' # Set to true for using managed identity
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true" # Set to true for using managed identity
     userAssignedIdentityID: $MANAGEDID # Set the clientID of the user-assigned managed identity to use
     keyvaultName: $KEYVAULTNAME # Set to the name of your key vault
-    cloudName: '' # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
+    cloudName: "" # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
     objects: |
       array:
         - |

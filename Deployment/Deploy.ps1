@@ -227,55 +227,10 @@ else {
         --set controller.metrics.enabled=true `
         --set rbac.create=false `
         --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
-
-    # helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-    #     --set controller.replicaCount=2 `
-    #     --set controller.metrics.enabled=true `
-    #     --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-    #     --set-string controller.podAnnotations."prometheus\.io/port"="10254"        
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254"   
 }
 
 helm install keda kedacore/keda -n $namespace
-
-# Setup ingress now that all services are deployed.
-if ($EnableApplicationGateway -eq "true") {
-    Write-Host "Using application gateway ingress controller yaml."
-    $content = Get-Content .\Deployment\external-ingress-agw.yaml
-}
-else {
-    Write-Host "Using ingress controller yaml."
-    $content = Get-Content .\Deployment\external-ingress.yaml
-}
-
-$content = $content.Replace('$NAMESPACE', $namespace)
-$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
-$content = $content.Replace('$API_DOMAIN', $apiDomain)
-$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
-
-# Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
-$content = $content.Replace('$NAMESPACE', $namespace)
-Set-Content -Path ".\ingress.yaml" -Value $content
-$rawOut = (kubectl apply -f .\ingress.yaml --namespace $namespace 2>&1)
-if ($LastExitCode -ne 0) {
-    $errorMsg = $rawOut -Join '`n'
-    if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
-        Write-Host "Attempting to recover from 'failed calling webhook' error."
-
-        # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
-        kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
-        kubectl apply -f .\ingress.yaml --namespace $namespace
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to deploy external ingress."
-        }
-    }
-    else {
-        throw "An error has occured. Unable to deploy external ingress. $errorMsg "
-    }    
-}
-else {
-    Write-Host "Applied ingress config."    
-}
 
 # Step 5: Setup configuration for resources
 
@@ -545,6 +500,45 @@ if ($QueueType -eq "Storage") {
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to deploy storage keda scaler."
     }
+}
+
+# Setup ingress now that all services are deployed.
+if ($EnableApplicationGateway -eq "true") {
+    Write-Host "Using application gateway ingress controller yaml."
+    $content = Get-Content .\Deployment\external-ingress-agw.yaml
+}
+else {
+    Write-Host "Using ingress controller yaml."
+    $content = Get-Content .\Deployment\external-ingress.yaml
+}
+
+$content = $content.Replace('$NAMESPACE', $namespace)
+$content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
+$content = $content.Replace('$API_DOMAIN', $apiDomain)
+$content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
+
+# Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
+$content = $content.Replace('$NAMESPACE', $namespace)
+Set-Content -Path ".\ingress.yaml" -Value $content
+$rawOut = (kubectl apply -f .\ingress.yaml --namespace $namespace 2>&1)
+if ($LastExitCode -ne 0) {
+    $errorMsg = $rawOut -Join '`n'
+    if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
+        Write-Host "Attempting to recover from 'failed calling webhook' error."
+
+        # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
+        kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
+        kubectl apply -f .\ingress.yaml --namespace $namespace
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to deploy external ingress."
+        }
+    }
+    else {
+        throw "An error has occured. Unable to deploy external ingress. $errorMsg "
+    }    
+}
+else {
+    Write-Host "Applied ingress config."    
 }
 
 if ($EnableApplicationGateway -ne "true") {
