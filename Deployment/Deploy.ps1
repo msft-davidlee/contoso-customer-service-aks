@@ -225,7 +225,6 @@ else {
         --set controller.nodeSelector."kubernetes\.io/os"=linux `
         --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
         --set controller.metrics.enabled=true `
-        --set rbac.create=false `
         --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
         --set-string controller.podAnnotations."prometheus\.io/port"="10254"   
 }
