@@ -17,25 +17,25 @@ spec:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: 'azure-kvname-podid'
+              secretProviderClass: "azure-kvname-podid"
       containers:
         - name: backendservice
           image: $ACRNAME.azurecr.io/$IMAGE
           env:
             - name: AzureWebJobsDashboard
-              value: '$AZURE_STORAGE_CONNECTION'
+              value: "$AZURE_STORAGE_CONNECTION"
             - name: AzureWebJobsStorage
-              value: '$AZURE_STORAGE_CONNECTION'
+              value: "$AZURE_STORAGE_CONNECTION"
             - name: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING
-              value: '$AZURE_STORAGE_CONNECTION'
+              value: "$AZURE_STORAGE_CONNECTION"
             - name: WEBSITE_CONTENTSHARE
-              value: 'functions2022'
+              value: "functions2022"
             - name: Connection
-              value: '$AZURE_STORAGEQUEUE_CONNECTION'
+              value: "$AZURE_STORAGEQUEUE_CONNECTION"
             - name: FUNCTIONS_WORKER_RUNTIME
-              value: 'dotnet'
+              value: "dotnet"
             - name: FUNCTIONS_EXTENSION_VERSION
-              value: '~4'
+              value: "~4"
             - name: DbSource
               value: $DBSOURCE
             - name: QueueName
@@ -57,7 +57,7 @@ spec:
               protocol: TCP
           volumeMounts:
             - name: secrets-store-backendservice
-              mountPath: '/mnt/secrets-store'
+              mountPath: "/mnt/secrets-store"
               readOnly: true
 ---
 apiVersion: v1

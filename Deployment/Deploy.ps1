@@ -46,22 +46,30 @@ $AKS_NAME = $aks.name
 $acr = GetResource -stackName shared-container-registry -stackEnvironment prod
 $acrName = $acr.Name
 
-# Step 2: Login to AKS.
-az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
-Write-Host "::set-output name=aksName::$AKS_NAME"
-
 $allMessages = (az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io" 2>&1)
 $allMessage = $allMessages -Join '`n'
+Write-Host $allMessage
+$acrErr = "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
 if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+    throw $acrErr
 }
 
 if ($allMessage.ToUpper().Contains("FAILED")) {
-    throw "An error has occured. Unable to verify if aks and acr are connected. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+    throw $acrErr
 }
 else {
     Write-Host $allMessage
 }
+
+$count = ($allMessage | Select-String -Pattern "SUCCEEDED" -AllMatches).Matches.Count
+if ($count -ne 3) {
+    Write-Host "SUCCEEDED Count = $count"
+    throw $acrErr
+}
+
+# Step 2: Login to AKS.
+az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
+Write-Host "::set-output name=aksName::$AKS_NAME"
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
@@ -193,9 +201,6 @@ if ($EnableApplicationGateway -eq "true") {
     else {
         Write-Host "Perfect, application gateway add-on is already installed."
     }
-
-    # Install this to test endpoint.
-    kubectl apply -f ./Deployment/aspnetapp.yaml --namespace $namespace
 }
 else {
 
@@ -203,6 +208,7 @@ else {
     # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 
     # Public IP is assigned only for Prod which we will reuse.
+    # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
     $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
     $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
     $ip = $pip.ipAddress    
@@ -220,15 +226,10 @@ else {
         --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
         --set controller.metrics.enabled=true `
         --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254"   
 }
 
 helm install keda kedacore/keda -n $namespace
-
-# if ($EnableFrontdoor) {
-#     $content = Get-Content .\Deployment\external-ingress-with-fd.yaml
-# }
-# else {
 
 # Step 5: Setup configuration for resources
 
@@ -500,12 +501,13 @@ if ($QueueType -eq "Storage") {
     }
 }
 
-# Last step: Setup ingress
+# Setup ingress now that all services are deployed.
 if ($EnableApplicationGateway -eq "true") {
-    Write-Host "Using yaml for application gateway ingress controller."
+    Write-Host "Using application gateway ingress controller yaml."
     $content = Get-Content .\Deployment\external-ingress-agw.yaml
 }
 else {
+    Write-Host "Using ingress controller yaml."
     $content = Get-Content .\Deployment\external-ingress.yaml
 }
 
@@ -513,12 +515,11 @@ $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
 $content = $content.Replace('$API_DOMAIN', $apiDomain)
 $content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
-#}
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
 $content = $content.Replace('$NAMESPACE', $namespace)
-Set-Content -Path ".\external-ingress.yaml" -Value $content
-$rawOut = (kubectl apply -f .\external-ingress.yaml --namespace $namespace 2>&1)
+Set-Content -Path ".\ingress.yaml" -Value $content
+$rawOut = (kubectl apply -f .\ingress.yaml --namespace $namespace 2>&1)
 if ($LastExitCode -ne 0) {
     $errorMsg = $rawOut -Join '`n'
     if ($errorMsg.Contains("failed calling webhook") -and $errorMsg.Contains("validate.nginx.ingress.kubernetes.io")) {
@@ -526,7 +527,7 @@ if ($LastExitCode -ne 0) {
 
         # See: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
         kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
-        kubectl apply -f .\external-ingress.yaml --namespace $namespace
+        kubectl apply -f .\ingress.yaml --namespace $namespace
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to deploy external ingress."
         }
@@ -536,7 +537,7 @@ if ($LastExitCode -ne 0) {
     }    
 }
 else {
-    Write-Host "Applied ingress config for ingress controller."
+    Write-Host "Applied ingress config."    
 }
 
 if ($EnableApplicationGateway -ne "true") {

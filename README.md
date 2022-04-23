@@ -10,15 +10,27 @@ To create this, you will need to follow the steps below.
 1. Fork this git repo. See: https://docs.github.com/en/get-started/quickstart/fork-a-repo
 2. Follow the steps in https://github.com/msft-davidlee/contoso-governance to create the necessary resources via Azure Blueprint.
 3. Create the following secret(s) in your github per environment. Be sure to populate with your desired values. The values below are all suggestions.
-4. Create required certificates for your solution using the following commands:
+4. Create required certificates for your solution either using openssl or using your owned domain names with Let's Encrypt. Make sure to name the key file cert.key and cert cert.cer.
+
+The following is an example of using openssl to generate a self-signed cert.
 ``` 
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out demo.contoso.com.crt -keyout demo.contoso.com.key -subj "/CN=demo.contoso.com/O=aks-ingress-tls"
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out cert.cer -keyout cert.key -subj "/CN=*.contoso.com/O=aks-ingress-tls"
+```
 
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out customerservice.contoso.com.crt -keyout customerservice.contoso.com.key -subj "/CN=customerservice.contoso.com/O=aks-ingress-tls"
-
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out member.contoso.com.crt -keyout member.contoso.com.key -subj "/CN=member.contoso.com/O=aks-ingress-tls"
-
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out api.contoso.com.crt -keyout api.contoso.com.key -subj "/CN=api.contoso.com/O=aks-ingress-tls"
+You will also need to specify the domain names in App Configuration with the key as contoso-customer-service-aks/cert-domain-names and the value as the following. The contoso.com would be replaced with a real domain name you own.
+```
+{
+	"ingress": {
+		"customerservice": "contosocustomerservice.contoso.com", 
+		"api": "contosoapi.contoso.com",
+		"memberportal": "contosomember.contoso.com"
+	},
+	"applicationgateway": {
+		"customerservice": "contoso-agw-customer-service.contoso.com", 
+		"api": "contoso-agw-api.contoso.com",
+		"memberportal": "contoso-agw-member.contoso.com"
+	}
+}
 ```
 5. Next, upload the outputs to a container named certs in your storage account.
 6. Execute the GitHub action workflow. You will notice an error in the "Deploy Apps" step that will require you to run the CompleteSetup.ps1 script manually.
