@@ -9,10 +9,14 @@ $count = 0
 $stackRes = (az resource list --tag stack-name=$StackNameTag | ConvertFrom-Json)
 $devRes = $stackRes | Where-Object { $_.tags.'stack-environment' -eq 'dev' }
 if ($devRes -and $devRes.Length -gt 0) {
-    if ($devRes.resourceGroup -eq $resourceGroupName) {
-        az resource delete --id $devRes.id
-        $count +=1
-    }    
+    $devRes | ForEach-Object {
+        if ($_.resourceGroup -eq $resourceGroupName) {
+            $id = $_.id
+            Write-Host "Removing $id"
+            az resource delete --id $_.id
+            $count += 1
+        }    
+    }
 }
 
 Write-Host "Number of resource deleted: $count"
