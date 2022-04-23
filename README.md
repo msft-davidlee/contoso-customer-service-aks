@@ -51,6 +51,13 @@ In addition, if we are adding an Application Gateway Ingress Controller, there a
 | MS_AZURE_CREDENTIALS | <pre>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"clientSecret": "", <br/>&nbsp;&nbsp;&nbsp;&nbsp;"subscriptionId": "",<br/>&nbsp;&nbsp;&nbsp;&nbsp;"tenantId": "" <br/>}</pre> |
 | PREFIX | mytodos - or whatever name you would like for all your resources |
 
+## Deploying with Default Nginx Ingress Controller
+If you did not enable Frontdoor or Application Gateway, the deployment would default to use Nginx Ingress Controller. 
+
+### Issue(s)
+
+1. There is an issue with the Ngix Ingress Controller where the Kubernetes Load Balancer's health check probes would NOT be configured correctly. The path is configured as just / but really needs to be /healthz. You would need to fix this manually.
+
 ## Deploying Frontdoor
 If you are deploying Frontdoor. Frontdoor by already has its domain name with SSL cert and that's what we will be using. 
 
@@ -70,6 +77,10 @@ If you are deploying Application Gateway, you should note that we will be using 
 | Key | contoso-customer-service-app-service/deployment-flags/enable-app-gateway |
 | Label | dev or prod |
 | Value | true or false |
+
+### Issue(s)
+
+1. There is an issue with the Application Gateway Ingress Controller setup which is using the Add-On approach. The routes are not configured correctly for some reason and you will get a 502 error when you try to browse to the site. We will need to execute the FixApplicationGatewayRoute.ps1 script to fix the issue.
 
 # Performance Testing
 1. For running a performance test, you can craft a payload against the Order endpoint https://api.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
@@ -107,8 +118,6 @@ kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
 ```
 
 More information on the issue can be found here: https://pet2cattle.com/2021/02/service-ingress-nginx-controller-admission-not-found
-
-6. There is an issue with the Application Gateway Ingress Controller setup which is using the Add-On approach. The routes are not configured correctly for some reason and you will get a 502 error when you try to browse to the site. We will need to execute the FixApplicationGatewayRoute.ps1 script to fix the issue.
 
 ## Have an issue?
 You are welcome to create an issue if you need help but please note that there is no timeline to answer or resolve any issues you have with the contents of this project. Use the contents of this project at your own risk! If you are interested to volunteer to maintain this, please feel free to reach out to be added as a contributor and send Pull Requests (PR).
