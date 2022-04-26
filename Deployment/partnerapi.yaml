@@ -72,6 +72,16 @@ spec:
                   key: contoso-customer-service-sql-password
             - name: ASPNETCORE_ENVIRONMENT
               value: Development
+            - name: AzureAd__Instance
+              value: $AADINSTANCE
+            - name: AzureAd__TenantId
+              value: $AADTENANTID
+            - name: AzureAd__Domain
+              value: $AADDOMAIN
+            - name: AzureAd__ClientId
+              value: $AADCLIENTID
+            - name: AzureAd__Audience
+              value: $AADAUDIENCE
             - name: QueueConnectionString
               value: FilePath=/etc/secret-volume/.secret-conn-file
             - name: QueueName

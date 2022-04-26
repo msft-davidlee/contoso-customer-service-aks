@@ -62,7 +62,7 @@ else {
 }
 
 $count = ($allMessage | Select-String -Pattern "SUCCEEDED" -AllMatches).Matches.Count
-if ($count -ne 3) {
+if ($count -lt 3) {
     Write-Host "SUCCEEDED Count = $count"
     throw $acrErr
 }
@@ -263,7 +263,8 @@ if ($QueueType -eq "Storage") {
     }
     $QueueStorageName = $storage.name
 
-    $imageName = "contoso-demo-storage-queue-func:$APP_VERSION"
+    # TODO: There is an issue with the newer version of Azure Function which we need to debug later.
+    $imageName = "contoso-demo-storage-queue-func:v5.1"
     $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $QueueStorageName | ConvertFrom-Json)[0].value
 
     if ($LastExitCode -ne 0) {
@@ -389,6 +390,11 @@ $content = $content.Replace('$DBSOURCE', $SqlServer)
 $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$SHIPPINGREPOSITORYTYPE', $QueueType)
+$content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
+$content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
+$content = $content.Replace('$AADDOMAIN', $AAD_DOMAIN)
+$content = $content.Replace('$AADCLIENTID', $AAD_CLIENT_ID)
+$content = $content.Replace('$AADAUDIENCE', $AAD_AUDIENCE)
 $content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
 $content = $content.Replace('$VERSION', $APP_VERSION)
 
