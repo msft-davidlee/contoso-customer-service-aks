@@ -62,7 +62,7 @@ else {
 }
 
 $count = ($allMessage | Select-String -Pattern "SUCCEEDED" -AllMatches).Matches.Count
-if ($count -ge 3) {
+if ($count -lt 3) {
     Write-Host "SUCCEEDED Count = $count"
     throw $acrErr
 }
