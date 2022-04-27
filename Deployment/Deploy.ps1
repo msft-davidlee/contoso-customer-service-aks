@@ -263,8 +263,7 @@ if ($QueueType -eq "Storage") {
     }
     $QueueStorageName = $storage.name
 
-    # TODO: There is an issue with the newer version of Azure Function which we need to debug later.
-    $imageName = "contoso-demo-storage-queue-func:v5.1"
+    $imageName = "contoso-demo-storage-queue-func:$APP_VERSION"
     $key1 = (az storage account keys list -g $AKS_RESOURCE_GROUP -n $QueueStorageName | ConvertFrom-Json)[0].value
 
     if ($LastExitCode -ne 0) {
