@@ -222,6 +222,7 @@ else {
         --set controller.service.loadBalancerIP=$ip `
         --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
         --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
+        --set controller.service.annotations."service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path"="/healthz" `
         --set controller.nodeSelector."kubernetes\.io/os"=linux `
         --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
         --set controller.metrics.enabled=true `
