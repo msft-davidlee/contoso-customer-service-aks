@@ -6,6 +6,10 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: azure/application-gateway
 spec:
+  tls:
+    - hosts:
+        - $API_DOMAIN
+      secretName: aks-api-tls  
   rules:
     - host: $API_DOMAIN
       http:
