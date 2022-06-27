@@ -316,7 +316,7 @@ if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to apply prometheus directory."
 }
 
-kubectl apply -f ".\aspnetapp.yaml" --namespace $apiNamespace
+kubectl apply -f ".\Deployment\aspnetapp.yaml" --namespace $apiNamespace
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy aspnetapp app."
 }
