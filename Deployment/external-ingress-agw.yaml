@@ -27,16 +27,6 @@ spec:
                   number: 80
             path: /(.*)
             pathType: Prefix
-    - host: $API_DOMAIN
-      http:
-        paths:
-          - backend:
-              service:
-                name: pointsservice
-                port:
-                  number: 80
-            path: /(.*)
-            pathType: Prefix
     - host: $MEMBER_PORTAL_DOMAIN
       http:
         paths:

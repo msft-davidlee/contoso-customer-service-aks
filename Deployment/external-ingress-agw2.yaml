@@ -19,5 +19,5 @@ spec:
                 name: aspnetapp
                 port:
                   number: 80
-            path: /foo/(.*)
+            path: /(.*)
             pathType: Prefix
