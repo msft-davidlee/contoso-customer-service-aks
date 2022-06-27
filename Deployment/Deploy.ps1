@@ -131,7 +131,16 @@ if (!$testNamespace ) {
     kubectl create namespace $namespace
 }
 else {
-    Write-Host "Skip creating frontend namespace as it already exist."
+    Write-Host "Skip creating $namespace namespace as it already exist."
+}
+
+$apiNamespace = "apis"
+$testApiNamespace = kubectl get namespace $apiNamespace
+if (!$testApiNamespace) {
+    kubectl create namespace $apiNamespace
+}
+else {
+    Write-Host "Skip creating $apiNamespace namespace as it already exist."
 }
 
 # Step 4: Setup an external ingress controller
@@ -305,6 +314,11 @@ Set-Content -Path ".\Deployment\prometheus\prometheus.yaml" -Value $content
 kubectl apply --kustomize Deployment/prometheus -n $namespace
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to apply prometheus directory."
+}
+
+kubectl apply -f ".\aspnetapp.yaml" --namespace $apiNamespace
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to deploy aspnetapp app."
 }
 
 # Step 6: Deploy customer service app.
@@ -550,4 +564,13 @@ if ($EnableApplicationGateway -ne "true") {
     # Step 12: Output ip address
     $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
     Write-Host "::set-output name=serviceip::$serviceip"
+}
+else {
+    Write-Host "Using application gateway ingress controller 2 yaml."
+    $content = Get-Content .\Deployment\external-ingress-agw2.yaml
+
+    $content = $content.Replace('$NAMESPACE', $apiNamespace)
+    $content = $content.Replace('$API_DOMAIN', $apiDomain)
+    Set-Content -Path ".\ingress.yaml" -Value $content
+    kubectl apply -f .\ingress.yaml --namespace $apiNamespace
 }

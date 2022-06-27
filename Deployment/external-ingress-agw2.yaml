@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-ingress
+  namespace: $NAMESPACE
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+spec:
+  rules:
+    - host: $API_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: aspnetapp
+                port:
+                  number: 80
+            path: /foo/(.*)
+            pathType: Prefix
