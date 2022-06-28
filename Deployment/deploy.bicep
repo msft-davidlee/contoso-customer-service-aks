@@ -255,7 +255,7 @@ resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-
 
 var appGwId = resourceId('Microsoft.Network/applicationGateways', stackName)
 
-resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAppGateway == 'true') {
+resource appGw 'Microsoft.Network/applicationGateways@2021-08-01' = if (enableAppGateway == 'true') {
   name: stackName
   location: location
   tags: tags
@@ -288,6 +288,7 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
       {
         name: 'appGwPublicFrontendIp'
         properties: {
+          privateIPAllocationMethod: 'Dynamic'
           publicIPAddress: {
             id: publicIPResId
           }
