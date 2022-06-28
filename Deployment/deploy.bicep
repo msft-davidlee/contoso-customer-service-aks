@@ -268,6 +268,7 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
     sku: {
       name: 'WAF_Medium'
       tier: 'WAF'
+      capacity: 1
     }
     gatewayIPConfigurations: [
       {
