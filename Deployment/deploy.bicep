@@ -290,9 +290,6 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
         properties: {
           privateIPAllocationMethod: 'Static'
           privateIPAddress: '10.0.8.10'
-          publicIPAddress: {
-            id: publicIPResId
-          }
         }
       }
     ]
