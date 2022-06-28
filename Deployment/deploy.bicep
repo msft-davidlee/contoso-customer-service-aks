@@ -14,7 +14,6 @@ param nodesResourceGroup string
 param backendFuncStorageSuffix string
 param storageQueueSuffix string
 param stackNameTag string
-param publicIPResId string
 param enableAppGateway string
 param appGwSubnetId string
 
@@ -267,8 +266,8 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
   }
   properties: {
     sku: {
-      name: 'WAF_v2'
-      tier: 'WAF_v2'
+      name: 'WAF'
+      tier: 'WAF'
     }
     autoscaleConfiguration: {
       minCapacity: 1
