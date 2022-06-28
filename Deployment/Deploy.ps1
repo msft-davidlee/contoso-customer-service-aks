@@ -125,23 +125,23 @@ if (!$memberPortalDomain) {
 }
 
 # Step 3: Create a namespace for your resources if it does not exist.
-$namespace = "myapps"
-$testNamespace = kubectl get namespace $namespace
-if (!$testNamespace ) {
-    kubectl create namespace $namespace
-}
-else {
-    Write-Host "Skip creating $namespace namespace as it already exist."
-}
+# $namespace = "myapps"
+# $testNamespace = kubectl get namespace $namespace
+# if (!$testNamespace ) {
+#     kubectl create namespace $namespace
+# }
+# else {
+#     Write-Host "Skip creating $namespace namespace as it already exist."
+# }
 
-$apiNamespace = "apis"
-$testApiNamespace = kubectl get namespace $apiNamespace
-if (!$testApiNamespace) {
-    kubectl create namespace $apiNamespace
-}
-else {
-    Write-Host "Skip creating $apiNamespace namespace as it already exist."
-}
+# $apiNamespace = "apis"
+# $testApiNamespace = kubectl get namespace $apiNamespace
+# if (!$testApiNamespace) {
+#     kubectl create namespace $apiNamespace
+# }
+# else {
+#     Write-Host "Skip creating $apiNamespace namespace as it already exist."
+# }
 
 # Step 4: Setup an external ingress controller
 $repoList = helm repo list --output json | ConvertFrom-Json
