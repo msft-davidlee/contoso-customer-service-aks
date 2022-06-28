@@ -125,7 +125,7 @@ if (!$memberPortalDomain) {
 }
 
 # Step 3: Create a namespace for your resources if it does not exist.
-# $namespace = "myapps"
+$namespace = "myapps"
 # $testNamespace = kubectl get namespace $namespace
 # if (!$testNamespace ) {
 #     kubectl create namespace $namespace
@@ -134,7 +134,7 @@ if (!$memberPortalDomain) {
 #     Write-Host "Skip creating $namespace namespace as it already exist."
 # }
 
-# $apiNamespace = "apis"
+$apiNamespace = "apis"
 # $testApiNamespace = kubectl get namespace $apiNamespace
 # if (!$testApiNamespace) {
 #     kubectl create namespace $apiNamespace
