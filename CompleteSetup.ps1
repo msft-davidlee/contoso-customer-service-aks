@@ -75,6 +75,9 @@ if ($appGws -and $appGws.Length -eq 1) {
     $assignee = (az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName | ConvertFrom-Json).identity.objectId
     $scope = (az identity list -g $resourceGroupName | ConvertFrom-Json).id 
     az role assignment create --role "Managed Identity Operator" --assignee $assignee --scope $scope
+
+    $appgwId = $appGw.id
+    Write-Host "Application gateway $appgwId configured."
 }
 else {
     Write-Host "No application gateway found in $resourceGroupName"
