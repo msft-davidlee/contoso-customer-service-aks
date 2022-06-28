@@ -269,10 +269,6 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
       name: 'WAF_Medium'
       tier: 'WAF'
     }
-    autoscaleConfiguration: {
-      minCapacity: 1
-      maxCapacity: 2
-    }
     gatewayIPConfigurations: [
       {
         name: 'appGatewayIpConfig'
