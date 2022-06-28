@@ -577,4 +577,8 @@ else {
     $content = $content.Replace('$API_DOMAIN', $apiDomain)
     Set-Content -Path ".\ingress.yaml" -Value $content
     kubectl apply -f .\ingress.yaml --namespace $apiNamespace
+
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to apply external-ingress-agw2.yaml"
+    }
 }
