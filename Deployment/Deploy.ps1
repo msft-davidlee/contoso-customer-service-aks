@@ -183,7 +183,7 @@ if (!$testSecret) {
         --cert .\cert.cer
 
     kubectl create secret tls aks-api-tls `
-        --namespace $namespace `
+        --namespace $apiNamespace `
         --key .\cert.key `
         --cert .\cert.cer
 
@@ -314,11 +314,6 @@ Set-Content -Path ".\Deployment\prometheus\prometheus.yaml" -Value $content
 kubectl apply --kustomize Deployment/prometheus -n $namespace
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to apply prometheus directory."
-}
-
-kubectl apply -f ".\Deployment\aspnetapp.yaml" --namespace $apiNamespace
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to deploy aspnetapp app."
 }
 
 # Step 6: Deploy customer service app.
@@ -458,7 +453,7 @@ $content = $content.Replace('$APPINSIGHTSKEY', $appInsightsKey)
 $content = $content.Replace('$VERSION', $APP_VERSION)
 
 Set-Content -Path ".\pointsservice.yaml" -Value $content
-kubectl apply -f ".\pointsservice.yaml" --namespace $namespace
+kubectl apply -f ".\pointsservice.yaml" --namespace $apiNamespace
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to deploy points service app."
 }

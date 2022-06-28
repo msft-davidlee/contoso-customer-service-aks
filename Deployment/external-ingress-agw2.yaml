@@ -16,7 +16,7 @@ spec:
         paths:
           - backend:
               service:
-                name: aspnetapp
+                name: pointsservice
                 port:
                   number: 80
             path: /(.*)
