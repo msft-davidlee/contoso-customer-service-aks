@@ -14,7 +14,7 @@ param nodesResourceGroup string
 param backendFuncStorageSuffix string
 param storageQueueSuffix string
 param stackNameTag string
-param publicIPResId string
+//param publicIPResId string
 param enableAppGateway string
 param appGwSubnetId string
 
@@ -255,6 +255,17 @@ resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-
 
 var appGwId = resourceId('Microsoft.Network/applicationGateways', stackName)
 
+resource appGwPip 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
+  name: stackName
+  location: location
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Dynamic'
+  }
+}
+
 resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAppGateway == 'true') {
   name: stackName
   location: location
@@ -288,7 +299,7 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
           privateIPAllocationMethod: 'Static'
           privateIPAddress: '10.0.8.10'
           publicIPAddress: {
-            id: publicIPResId
+            id: appGwPip.id
           }
         }
       }

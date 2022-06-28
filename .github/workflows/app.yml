@@ -94,7 +94,6 @@ jobs:
             backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             storageQueueSuffix=${{ env.STORAGE_QUEUE_SUFFIX }}
             stackNameTag=${{ env.STACK_NAME_TAG }}
-            publicIPResId=${{ steps.resolve-shared-resources.outputs.pipResId }}
             enableAppGateway=${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
             appGwSubnetId=${{ steps.resolve-shared-resources.outputs.appGwSubnetId }}
     outputs:
