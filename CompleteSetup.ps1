@@ -76,3 +76,6 @@ if ($appGws -and $appGws.Length -eq 1) {
     $scope = (az identity list -g $resourceGroupName | ConvertFrom-Json).id 
     az role assignment create --role "Managed Identity Operator" --assignee $assignee --scope $scope
 }
+else {
+    Write-Host "No application gateway found in $resourceGroupName"
+}
