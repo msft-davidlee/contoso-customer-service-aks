@@ -32,13 +32,32 @@ if ($LastExitCode -ne 0) {
 
 $appGws = (az resource list -g $resourceGroupName --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json)
 if ($appGws -and $appGws.Length -eq 1) {
+
+    # Create namespaces first as we want appgw to watch them
+    $namespace = "myapps"
+    $testNamespace = kubectl get namespace $namespace
+    if (!$testNamespace ) {
+        kubectl create namespace $namespace
+    }
+    else {
+        Write-Host "Skip creating $namespace namespace as it already exist."
+    }
+
+    $apiNamespace = "apis"
+    $testApiNamespace = kubectl get namespace $apiNamespace
+    if (!$testApiNamespace) {
+        kubectl create namespace $apiNamespace
+    }
+    else {
+        Write-Host "Skip creating $apiNamespace namespace as it already exist."
+    }
     
     $appGw = $appGws[0]
     az extension add --name aks-preview
 
     $isInstalled = az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName
     if (!$isInstalled) {
-        az aks enable-addons -n $aksName -g $resourceGroupName -a ingress-appgw --appgw-id $appGw.id --appgw-watch-namespace myapps,apis
+        az aks enable-addons -n $aksName -g $resourceGroupName -a ingress-appgw --appgw-id $appGw.id --appgw-watch-namespace myapps, apis
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to enable Application gateway add-on."
         }
