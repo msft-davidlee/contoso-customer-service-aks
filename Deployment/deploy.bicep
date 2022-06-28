@@ -258,12 +258,12 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
   name: stackName
   location: location
   tags: tags
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${aksMSIId}': {}
-    }
-  }
+  // identity: {
+  //   type: 'UserAssigned'
+  //   userAssignedIdentities: {
+  //     '${aksMSIId}': {}
+  //   }
+  // }
   properties: {
     sku: {
       name: 'WAF_Medium'
