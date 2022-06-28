@@ -42,13 +42,20 @@ $AKS_NAME = $aks.name
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
 Write-Host "::set-output name=aksName::$AKS_NAME"
 
+az extension add --name aks-preview
+
+$isInstalled = az aks addon show --addon ingress-appgw -n $AKS_NAME -g $AKS_RESOURCE_GROUP
+
+if (!$isInstalled) {        
+    throw "An error has occured. Unable to verify Application gateway add-on is installed on AKS Cluster. Please run CompleteSetup.ps1 script now and when you are done, you can rerun this GitHub workflow."
+}
+else {
+    Write-Host "Perfect, application gateway add-on is already installed."
+}
+
 $namespace1 = "dev"
 $namespace2 = "stg"
 $namespace3 = "prd"
-
-kubectl create namespace $namespace1
-kubectl create namespace $namespace2
-kubectl create namespace $namespace3
 
 kubectl apply -f ".\Deployment\app1.yaml" --namespace $namespace1
 kubectl apply -f ".\Deployment\app2.yaml" --namespace $namespace2
