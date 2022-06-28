@@ -182,18 +182,26 @@ if (!$testSecret) {
         --key .\cert.key `
         --cert .\cert.cer
 
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to set TLS for aks-csv-tls secret."
+    }
+
     kubectl create secret tls aks-api-tls `
         --namespace $apiNamespace `
         --key .\cert.key `
         --cert .\cert.cer
 
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to set TLS for aks-api-tls secret."
+    }
+                
     kubectl create secret tls aks-mem-tls `
         --namespace $namespace `
         --key .\cert.key `
         --cert .\cert.cer
 
     if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to set TLS for secrets."
+        throw "An error has occured. Unable to set TLS for aks-mem-tls secret."
     }
 }
 
