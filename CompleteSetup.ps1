@@ -57,7 +57,7 @@ if ($appGws -and $appGws.Length -eq 1) {
 
     $isInstalled = az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName
     if (!$isInstalled) {
-        az aks enable-addons -n $aksName -g $resourceGroupName -a ingress-appgw --appgw-id $appGw.id --appgw-watch-namespace myapps, apis
+        az aks enable-addons -n $aksName -g $resourceGroupName -a ingress-appgw --appgw-id $appGw.id --appgw-watch-namespace 'myapps,apis'
         if ($LastExitCode -ne 0) {
             throw "An error has occured. Unable to enable Application gateway add-on."
         }
