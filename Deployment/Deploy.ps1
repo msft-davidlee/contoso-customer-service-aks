@@ -443,6 +443,7 @@ $content = $content.Replace('$DBNAME', $DbName)
 $content = $content.Replace('$DBUSERID', $SqlUsername)
 $content = $content.Replace('$ACRNAME', $acrName)
 $content = $content.Replace('$NAMESPACE', $namespace)
+$content = $content.Replace('$APINAMESPACE', $apiNamespace)
 
 $content = $content.Replace('$AADINSTANCE', $AAD_INSTANCE)
 $content = $content.Replace('$AADTENANTID', $AAD_TENANT_ID)
