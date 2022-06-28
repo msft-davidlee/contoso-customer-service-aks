@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ing
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/use-private-ip: 'true'
+spec:
+  rules:
+    - host: 'stg.contoso.net'
+      http:
+        paths:
+          - path: /
+            backend:
+              service:
+                name: aspnetapp2
+                port:
+                  number: 80
+            pathType: Prefix

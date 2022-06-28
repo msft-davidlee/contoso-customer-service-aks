@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aspnetapp1
+  labels:
+    app: aspnetapp1
+spec:
+  containers:
+    - image: 'mcr.microsoft.com/dotnet/core/samples:aspnetapp'
+      name: aspnetapp1
+      ports:
+        - containerPort: 80
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aspnetapp1
+spec:
+  selector:
+    app: aspnetapp1
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

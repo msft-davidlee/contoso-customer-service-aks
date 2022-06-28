@@ -122,7 +122,7 @@ jobs:
       - id: appsdeploy
         name: Deploy apps
         run: |
-          .\Deployment\Deploy.ps1 `
+          .\Deployment\Deploy2.ps1 `
           -QueueName ${{ needs.cd_deploy.outputs.queueName }} `
           -QueueType ${{ needs.cd_deploy.outputs.queueType }} `
           -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
