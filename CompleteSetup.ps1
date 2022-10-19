@@ -2,8 +2,10 @@ param([Parameter(Mandatory = $true)][string]$ArdEnvironment)
 
 $ErrorActionPreference = "Stop"
 
+$ArdSolutionId = "aks-demo"
+
 $groups = az group list --tag ard-environment=$ArdEnvironment | ConvertFrom-Json
-$resourceGroupName = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId }).name
+$resourceGroupName = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId -and !$_.tags.'aks-managed-cluster-rg' }).name
 $aks = (az resource list -g $resourceGroupName --resource-type "Microsoft.ContainerService/managedClusters" | ConvertFrom-Json)[0]
 az aks get-credentials -n $aks.name -g $resourceGroupName --overwrite-existing
 $acr = (az resource list --tag ard-resource-id=shared-container-registry | ConvertFrom-Json)

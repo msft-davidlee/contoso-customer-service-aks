@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$all = az resource list --tag ard-solution-id=$ArdSolutionId
+$all = az resource list --tag ard-solution-id=$ArdSolutionId | ConvertFrom-Json
 $all = $all | Where-Object { $_.tags.'ard-environment' -eq $ArdEnvironment }
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
