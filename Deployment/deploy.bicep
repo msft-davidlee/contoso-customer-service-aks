@@ -3,7 +3,7 @@ param appEnvironment string
 param location string
 param sharedResourceGroup string
 param keyVaultName string
-param kubernetesVersion string = '1.23.3'
+param kubernetesVersion string = '1.24.6'
 param subnetId string
 param aksMSIId string
 param queueType string
