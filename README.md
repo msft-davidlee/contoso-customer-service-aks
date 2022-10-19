@@ -8,6 +8,13 @@ The information contained in this README.md file and any accompanying materials 
 
 ## Get Started
 
+Please register the following resource providers in your subscription if you have not done so. An example: ``` az provider register --namespace Microsoft.OperationsManagement ```.
+
+* Microsoft.Compute
+* microsoft.containerservice
+* microsoft.operationalinsights
+* Microsoft.OperationsManagement
+
 Follow the steps below to create this demo.
 
 1. [Fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) this git repo.
