@@ -20,7 +20,7 @@ if ($EnableApplicationGateway -eq "skip") {
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
-$all = az resource list --tag ard-solution-id=$ArdSolutionId
+$all = az resource list --tag ard-solution-id=$ArdSolutionId | ConvertFrom-Json
 $all = $all | Where-Object { $_.tags.'ard-environment' -eq $ArdEnvironment }
 $aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClusters' }
 $AKS_RESOURCE_GROUP = $aks.resourceGroup
