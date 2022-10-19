@@ -1,6 +1,5 @@
 param(
     [Parameter(Mandatory = $true)][string]$ArdEnvironment,
-    [Parameter(Mandatory = $true)][string]$Prefix,
     [Parameter(Mandatory = $true)][string]$ArdSolutionId)
 
 $ErrorActionPreference = "Stop"
@@ -46,11 +45,6 @@ $groups = az group list --tag ard-environment=$ArdEnvironment | ConvertFrom-Json
 $appResourceGroup = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId })[0].name
 Write-Host "::set-output name=appResourceGroup::$appResourceGroup"
 
-# We can provide a name but it cannot be existing
-# https://docs.microsoft.com/en-us/azure/aks/faq#can-i-provide-my-own-name-for-the-aks-node-resource-group
-$nodesResourceGroup = "$appResourceGroup-$Prefix"
-Write-Host "::set-output name=nodesResourceGroup::$nodesResourceGroup"
-
 # https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-tutorial-use-key-vault
 $keyVaultId = $kv.id
 Write-Host "::set-output name=keyVaultId::$keyVaultId"
@@ -74,9 +68,20 @@ Write-Host "::set-output name=enableFrontdoor::$enableFrontdoor"
 
 $queueType = (az appconfig kv show -n $configName --key "$ArdSolutionId/deployment-flags/queue-type" --label $ArdEnvironment --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to get queue-type flag from $configName."
+    throw "An error has occured. Unable to get queue-type from $configName."
 }
 Write-Host "::set-output name=queueType::$queueType"
+
+$deploymentPrefix = (az appconfig kv show -n $configName --key "$ArdSolutionId/deployment-prefix" --label $ArdEnvironment --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get deployment prefix from $deploymentPrefix."
+}
+Write-Host "::set-output name=deploymentPrefix::$deploymentPrefix"
+
+# We can provide a name but it cannot be existing
+# https://docs.microsoft.com/en-us/azure/aks/faq#can-i-provide-my-own-name-for-the-aks-node-resource-group
+$nodesResourceGroup = "$appResourceGroup-$deploymentPrefix"
+Write-Host "::set-output name=nodesResourceGroup::$nodesResourceGroup"
 
 $EnableApplicationGateway = (az appconfig kv show -n $configName --key "$ArdSolutionId/deployment-flags/enable-app-gateway" --label $ArdEnvironment --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {

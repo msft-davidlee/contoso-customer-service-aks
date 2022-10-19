@@ -62,8 +62,7 @@ jobs:
         run: |
           .\ResolveSharedResources.ps1 `
           -ArdSolutionId ${{ env.ARD_SOLUTION_ID_TAG }} `
-          -ArdEnvironment ${{ needs.setup.outputs.build_env }} `
-          -Prefix ${{ secrets.PREFIX }}
+          -ArdEnvironment ${{ needs.setup.outputs.build_env }}
 
       - name: Build azure environment
         id: deploy
@@ -77,7 +76,7 @@ jobs:
             location=${{ steps.resolve-shared-resources.outputs.location }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             queueType=${{ steps.resolve-shared-resources.outputs.queueType }}
-            prefix=${{ secrets.PREFIX }}
+            prefix=${{ steps.resolve-shared-resources.outputs.deploymentPrefix }}
             appEnvironment=${{ needs.setup.outputs.build_env }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}

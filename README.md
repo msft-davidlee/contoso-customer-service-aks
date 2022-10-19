@@ -21,17 +21,16 @@ Follow the steps below to create this demo.
 2. Follow the [governance](https://github.com/msft-davidlee/contoso-governance) which will allow you to create a service principal and have the correct role assignment to the aks specified resource groups.
 3. Follow the [networking](https://github.com/msft-davidlee/contoso-networking) steps to create the networks.
 4. Follow the [application](https://github.com/msft-davidlee/contoso-customer-service-app) steps to create application artifacts.
-5. Create 2 environments, prod and dev and create a secret PREFIX which is used to name your resources with in each environment.
-6. Register a domain name.
-7. Create sub-domain names for customer service app (ex: contoso-customer-service), api (ex: contoso-api) and member portal (ex: contoso-member).
-8. Create a SSL certifcate for your sub-domain name. There is a free option using [Let’s Encrypt](https://letsencrypt.org/).
-9. upload the outputs to a container named certs in your storage account.
-10. Run the following to setup your deployment configurations. ``` .\ResetAppConfigs.ps1 -CustomerServiceDomainName contoso-customer-service.<your domain name>.com -ApiDomainName contoso-api.<your domain name>.com -MemberPortalDomainName contoso-member.<your domain name>.com ```
-11. Ensure your AAD App Registration is configured with this sub-domain name. Be sure to append /signin-odic as part of the path.
-12. Before running the GitHub workflow, you should review the options below.
-13. Execute the GitHub action workflow. You will notice an error in the "Deploy Apps" step that will require you to run the CompleteSetup.ps1 script manually. Be sure to pass in BUILD_ENV parameter which can be either dev or prod.
-14. Once this is completed, you can now choose to run ONLY the steps that failed i.e. "Deploy Apps" step to save time. It should be successful this time.
-15. To teardown your solution, run ``` .\RemoveSolution.ps1 -ArdSolutionId app-service-demo -ArdEnvironment <either dev or prod> ```
+5. Register a domain name.
+6. Create sub-domain names for customer service app (ex: contoso-customer-service), api (ex: contoso-api) and member portal (ex: contoso-member).
+7. Create a SSL certifcate for your sub-domain name. There is a free option using [Let’s Encrypt](https://letsencrypt.org/).
+8. upload the outputs to a container named certs in your storage account.
+9. Run the following to setup your deployment configurations. ``` .\ResetAppConfigs.ps1 -CustomerServiceDomainName contoso-customer-service.<your domain name>.com -ApiDomainName contoso-api.<your domain name>.com -MemberPortalDomainName contoso-member.<your domain name>.com ```
+10. Ensure your AAD App Registration is configured with this sub-domain name. Be sure to append /signin-odic as part of the path.
+11. Before running the GitHub workflow, you should review the options below.
+12. Execute the GitHub action workflow. You will notice an error in the "Deploy Apps" step that will require you to run the CompleteSetup.ps1 script manually. Be sure to pass in BUILD_ENV parameter which can be either dev or prod.
+13. Once this is completed, you can now choose to run ONLY the steps that failed i.e. "Deploy Apps" step to save time. It should be successful this time.
+14. To teardown your solution, run ``` .\RemoveSolution.ps1 -ArdSolutionId app-service-demo -ArdEnvironment <either dev or prod> ```
 
 ## Why do we need to run CompleteSetup.ps1 script?
 
