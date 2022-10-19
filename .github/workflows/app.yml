@@ -81,6 +81,7 @@ jobs:
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}
             nodesResourceGroup=${{ steps.resolve-shared-resources.outputs.nodesResourceGroup }}
+            backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
             storageQueueSuffix=${{ env.STORAGE_QUEUE_SUFFIX }}
