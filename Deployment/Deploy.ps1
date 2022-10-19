@@ -197,9 +197,12 @@ else {
     }
 
     $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
-    $ip = $pip.ipAddress    
+    $ipResGroup = $pip.resourceGroup
+    $ip = az network public-ip show --name $pip.name -g $ipResGroup --query ipAddress -o tsv
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to get public ip address"
+    }
     $ipFqdn = $aks.name
-    $ipResGroup = $pipRes.resourceGroup
 
     Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
 
