@@ -43,7 +43,7 @@ Write-Host "::set-output name=sharedResourceGroup::$sharedResourceGroup"
 
 # This is the rg where the application should be deployed
 $groups = az group list --tag ard-environment=$ArdEnvironment | ConvertFrom-Json
-$appResourceGroup = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId -and $_.tags.'ard-environment' -eq $ArdEnvironment }).name
+$appResourceGroup = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId })[0].name
 Write-Host "::set-output name=appResourceGroup::$appResourceGroup"
 
 # We can provide a name but it cannot be existing
