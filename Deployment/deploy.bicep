@@ -1,6 +1,5 @@
 param prefix string
 param appEnvironment string
-param branch string
 param location string
 param sharedResourceGroup string
 param keyVaultName string
@@ -9,29 +8,18 @@ param subnetId string
 param aksMSIId string
 param queueType string
 param version string
-param lastUpdated string = utcNow('u')
 param nodesResourceGroup string
 param backendFuncStorageSuffix string
 param storageQueueSuffix string
-param stackNameTag string
 param publicIPResId string
 param enableAppGateway string
 param appGwSubnetId string
 
 var stackName = '${prefix}${appEnvironment}'
-var tags = {
-  'stack-name': stackNameTag
-  'stack-environment': appEnvironment
-  'stack-branch': branch
-  'stack-version': version
-  'stack-last-updated': lastUpdated
-  'stack-sub-name': 'demo'
-}
 
 resource appinsights 'Microsoft.Insights/components@2020-02-02' = {
   name: stackName
   location: location
-  tags: tags
   kind: 'web'
   properties: {
     Application_Type: 'web'
@@ -40,10 +28,9 @@ resource appinsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-resource str 'Microsoft.Storage/storageAccounts@2021-08-01' = if (queueType == 'Storage') {
+resource str 'Microsoft.Storage/storageAccounts@2022-05-01' = if (queueType == 'Storage') {
   name: '${stackName}${storageQueueSuffix}'
   location: location
-  tags: tags
   kind: 'StorageV2'
   sku: {
     name: 'Standard_LRS'
@@ -63,13 +50,13 @@ resource str 'Microsoft.Storage/storageAccounts@2021-08-01' = if (queueType == '
   }
 }
 
-resource strqueue 'Microsoft.Storage/storageAccounts/queueServices@2021-08-01' = if (queueType == 'Storage') {
+resource strqueue 'Microsoft.Storage/storageAccounts/queueServices@2022-05-01' = if (queueType == 'Storage') {
   name: 'default'
   parent: str
 }
 
 var queueName = 'orders'
-resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@2021-08-01' = if (queueType == 'Storage') {
+resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-05-01' = if (queueType == 'Storage') {
   name: queueName
   parent: strqueue
 }
@@ -77,13 +64,12 @@ resource strqueuename 'Microsoft.Storage/storageAccounts/queueServices/queues@20
 resource sbu 'Microsoft.ServiceBus/namespaces@2021-11-01' = if (queueType == 'ServiceBus') {
   name: stackName
   location: location
-  tags: tags
   sku: {
     name: 'Basic'
   }
 }
 
-resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
+resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2022-01-01-preview' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: 'Sender'
   properties: {
@@ -93,7 +79,7 @@ resource sbuSenderAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2
   }
 }
 
-resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2021-11-01' = if (queueType == 'ServiceBus') {
+resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2022-01-01-preview' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: 'Listener'
   properties: {
@@ -103,7 +89,7 @@ resource sbuListenAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2
   }
 }
 
-resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = if (queueType == 'ServiceBus') {
+resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2022-01-01-preview' = if (queueType == 'ServiceBus') {
   parent: sbu
   name: queueName
   properties: {
@@ -123,7 +109,7 @@ resource sbuQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = if (queu
 
 //https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/key-vault-parameter?tabs=azure-cli#use-getsecret-function
 
-resource kv 'Microsoft.KeyVault/vaults@2021-11-01-preview' existing = {
+resource kv 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: keyVaultName
   scope: resourceGroup(subscription().subscriptionId, sharedResourceGroup)
 }
@@ -134,7 +120,6 @@ module sql './sql.bicep' = {
     subnetId: subnetId
     stackName: stackName
     sqlPassword: kv.getSecret('contoso-customer-service-sql-password')
-    tags: tags
     location: location
   }
 }
@@ -142,7 +127,6 @@ module sql './sql.bicep' = {
 resource wks 'Microsoft.OperationalInsights/workspaces@2021-06-01' = {
   name: stackName
   location: location
-  tags: tags
   properties: {
     sku: {
       name: 'PerGB2018'
@@ -155,10 +139,9 @@ resource wks 'Microsoft.OperationalInsights/workspaces@2021-06-01' = {
 // The NMI pods will fail to run with error AAD Pod Identity is not supported for Kubenet.
 // https://github.com/Azure/aad-pod-identity/blob/master/website/content/en/docs/Configure/aad_pod_identity_on_kubenet.md
 
-resource aks 'Microsoft.ContainerService/managedClusters@2022-01-02-preview' = {
+resource aks 'Microsoft.ContainerService/managedClusters@2022-08-03-preview' = {
   name: stackName
   location: location
-  tags: tags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -190,7 +173,6 @@ resource aks 'Microsoft.ContainerService/managedClusters@2022-01-02-preview' = {
         osType: 'Linux'
         osDiskType: 'Managed'
         vnetSubnetID: subnetId
-        tags: tags
       }
     ]
     addonProfiles: {
@@ -210,7 +192,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2022-01-02-preview' = {
 output aksName string = aks.name
 output managedIdentityId string = aks.properties.addonProfiles.azureKeyvaultSecretsProvider.identity.clientId
 
-resource backendappStr 'Microsoft.Storage/storageAccounts@2021-08-01' = {
+resource backendappStr 'Microsoft.Storage/storageAccounts@2022-05-01' = {
   name: '${stackName}${backendFuncStorageSuffix}'
   location: location
   sku: {
@@ -230,7 +212,6 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2021-08-01' = {
       ]
     }
   }
-  tags: tags
 }
 
 output queueName string = queueName
@@ -241,7 +222,6 @@ var containerInsightsName = 'ContainerInsights(${wks.name})'
 resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' = {
   name: containerInsightsName
   location: location
-  tags: tags
   plan: {
     name: containerInsightsName
     promotionCode: ''
@@ -253,12 +233,9 @@ resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-
   }
 }
 
-var appGwId = resourceId('Microsoft.Network/applicationGateways', stackName)
-
-resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAppGateway == 'true') {
+resource appGw 'Microsoft.Network/applicationGateways@2022-05-01' = if (enableAppGateway == 'true') {
   name: stackName
   location: location
-  tags: tags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -324,10 +301,10 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
         name: 'default-listener'
         properties: {
           frontendIPConfiguration: {
-            id: '${appGwId}/frontendIPConfigurations/appGwPublicFrontendIp'
+            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', stackName, 'appGwPublicFrontendIp')
           }
           frontendPort: {
-            id: '${appGwId}/frontendPorts/default-frontend-port'
+            id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', stackName, 'default-frontend-port')
           }
           protocol: 'Http'
         }
@@ -339,13 +316,13 @@ resource appGw 'Microsoft.Network/applicationGateways@2021-05-01' = if (enableAp
         properties: {
           ruleType: 'Basic'
           httpListener: {
-            id: '${appGwId}/httpListeners/default-listener'
+            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', stackName, 'default-listener')
           }
           backendAddressPool: {
-            id: '${appGwId}/backendAddressPools/default-backend-pool'
+            id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', stackName, 'default-backend-pool')
           }
           backendHttpSettings: {
-            id: '${appGwId}/backendHttpSettingsCollection/default-backend-http-setting'
+            id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', stackName, 'default-backend-http-setting')
           }
         }
       }

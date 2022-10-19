@@ -10,10 +10,8 @@ on:
         description: 'Environment selector'
         required: false
 env:
-  APP_VERSION: 'v5.16'
-  BACKEND_FUNC_STORAGE_SUFFIX: 'backendapp'
-  STORAGE_QUEUE_SUFFIX: 'db'
-  STACK_NAME_TAG: 'contoso-customer-service-aks'
+  APP_VERSION: 'v6.2'
+  ARD_SOLUTION_ID_TAG: 'app-service-demo'
 
 jobs:
   setup:
@@ -56,19 +54,13 @@ jobs:
           creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
           enable-AzPSSession: true
 
-      - id: removedevresources
-        if: needs.setup.outputs.build_env == 'prod'
-        name: Remove Dev Resources
-        run: |
-          .\Deployment\RemoveDevResources.ps1 -StackNameTag ${{ env.STACK_NAME_TAG }}
-
       - id: resolve-shared-resources
         name: Resolve shared resources
         working-directory: .\deployment
         run: |
           .\ResolveSharedResources.ps1 `
-          -stackNameTag ${{ env.STACK_NAME_TAG }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
+          -ArdSolutionId ${{ env.ARD_SOLUTION_ID_TAG }} `
+          -ArdEnvironment ${{ needs.setup.outputs.build_env }} `
           -Prefix ${{ secrets.PREFIX }}
 
       - name: Build azure environment
@@ -85,7 +77,6 @@ jobs:
             queueType=${{ steps.resolve-shared-resources.outputs.queueType }}
             prefix=${{ secrets.PREFIX }}
             appEnvironment=${{ needs.setup.outputs.build_env }}
-            branch=${{ github.ref }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}
             nodesResourceGroup=${{ steps.resolve-shared-resources.outputs.nodesResourceGroup }}
@@ -93,7 +84,6 @@ jobs:
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
             backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             storageQueueSuffix=${{ env.STORAGE_QUEUE_SUFFIX }}
-            stackNameTag=${{ env.STACK_NAME_TAG }}
             publicIPResId=${{ steps.resolve-shared-resources.outputs.pipResId }}
             enableAppGateway=${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
             appGwSubnetId=${{ steps.resolve-shared-resources.outputs.appGwSubnetId }}
@@ -125,12 +115,12 @@ jobs:
           .\Deployment\Deploy.ps1 `
           -QueueName ${{ needs.cd_deploy.outputs.queueName }} `
           -QueueType ${{ needs.cd_deploy.outputs.queueType }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
+          -ArdEnvironment ${{ needs.setup.outputs.build_env }} `
           -APP_VERSION ${{ env.APP_VERSION }} `
           -AKSMSIId ${{ needs.cd_deploy.outputs.managedIdentityId }} `
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
           -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
-          -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
+          -ArdSolutionId ${{ env.STACK_NAME_TAG }} `
           -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
 
   deploy_db:

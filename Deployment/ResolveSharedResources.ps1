@@ -1,29 +1,19 @@
 param(
-    [Parameter(Mandatory = $true)][string]$BUILD_ENV,
+    [Parameter(Mandatory = $true)][string]$ArdEnvironment,
     [Parameter(Mandatory = $true)][string]$Prefix,
-    [Parameter(Mandatory = $true)][string]$StackNameTag)
-
-function GetResource([string]$stackName, [string]$stackEnvironment) {
-    $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
-    if (!$platformRes) {
-        throw "Unable to find eligible $stackName resource!"
-    }
-    if ($platformRes.Length -eq 0) {
-        throw "Unable to find 'ANY' eligible $stackName resource!"
-    }
-    
-    $res = ($platformRes | Where-Object { $_.tags.'stack-environment' -eq $stackEnvironment })
-    if (!$res) {
-        throw "Unable to find $stackName resource by $stackEnvironment environment!"
-    }
-    
-    return $res
-}
+    [Parameter(Mandatory = $true)][string]$ArdSolutionId)
 
 $ErrorActionPreference = "Stop"
 
-$allResources = GetResource -stackName platform -stackEnvironment $BUILD_ENV
-$vnet = $allResources | Where-Object { $_.type -eq 'Microsoft.Network/virtualNetworks' -and (!$_.name.EndsWith('-nsg')) -and $_.name.Contains('-pri-') }
+$networks = (az resource list --tag ard-solution-id=networking-pri | ConvertFrom-Json)
+if (!$networks) {
+    throw "Unable to find eligible shared key vault resource!"
+}
+
+$vnet = ($networks | Where-Object { $_.type -eq "Microsoft.Network/virtualNetworks" -and $_.tags.'ard-environment' -eq $ArdEnvironment })
+if (!$vnet) {
+    throw "Unable to find Virtual Network resource!"
+}
 $vnetRg = $vnet.resourceGroup
 $vnetName = $vnet.name
 $location = $vnet.location
@@ -35,22 +25,25 @@ if (!$subnets) {
 }          
 $subnetId = ($subnets | Where-Object { $_.name -eq "aks" }).id
 if (!$subnetId) {
-    throw "Unable to find aks Subnet resource!"
+    throw "Unable to find default Subnet resource!"
 }
 Write-Host "::set-output name=subnetId::$subnetId"
 
 $appGwSubnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
 Write-Host "::set-output name=appGwSubnetId::$appGwSubnetId"
 
-$kv = GetResource -stackName shared-key-vault -stackEnvironment prod
+$kv = (az resource list --tag ard-resource-id=shared-key-vault | ConvertFrom-Json)
+if (!$kv) {
+    throw "Unable to find eligible shared key vault resource!"
+}
 $kvName = $kv.name
 Write-Host "::set-output name=keyVaultName::$kvName"
 $sharedResourceGroup = $kv.resourceGroup
 Write-Host "::set-output name=sharedResourceGroup::$sharedResourceGroup"
 
 # This is the rg where the application should be deployed
-$groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
-$appResourceGroup = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' }).name
+$groups = az group list --tag ard-environment=$ArdEnvironment | ConvertFrom-Json
+$appResourceGroup = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId }).name
 Write-Host "::set-output name=appResourceGroup::$appResourceGroup"
 
 # We can provide a name but it cannot be existing
@@ -62,26 +55,30 @@ Write-Host "::set-output name=nodesResourceGroup::$nodesResourceGroup"
 $keyVaultId = $kv.id
 Write-Host "::set-output name=keyVaultId::$keyVaultId"
 
+$config = (az resource list --tag ard-resource-id=shared-app-configuration | ConvertFrom-Json)
+if (!$config) {
+    throw "Unable to find App Config resource!"
+}
+$sharedResourceGroup = $config.resourceGroup
+
 # Also resolve managed identity to use
-$identity = az identity list -g $appResourceGroup | ConvertFrom-Json
-$mid = $identity.id
+$mid = (az identity list -g $sharedResourceGroup | ConvertFrom-Json).id
 Write-Host "::set-output name=managedIdentityId::$mid"
 
-$config = GetResource -stackName shared-configuration -stackEnvironment prod
 $configName = $config.name
-$enableFrontdoor = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/enable-frontdoor" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$enableFrontdoor = (az appconfig kv show -n $configName --key "$ArdSolutionId/deployment-flags/enable-frontdoor" --label $ArdEnvironment --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-frontdoor flag from $configName."
 }
 Write-Host "::set-output name=enableFrontdoor::$enableFrontdoor"
 
-$queueType = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/queue-type" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$queueType = (az appconfig kv show -n $configName --key "$ArdSolutionId/deployment-flags/queue-type" --label $ArdEnvironment --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get queue-type flag from $configName."
 }
 Write-Host "::set-output name=queueType::$queueType"
 
-$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$StackNameTag/deployment-flags/enable-app-gateway" --label $BUILD_ENV --auth-mode login | ConvertFrom-Json).value
+$EnableApplicationGateway = (az appconfig kv show -n $configName --key "$ArdSolutionId/deployment-flags/enable-app-gateway" --label $ArdEnvironment --auth-mode login | ConvertFrom-Json).value
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-application gateway flag  from $configName."
 }
@@ -95,27 +92,21 @@ if ($EnableApplicationGateway -eq "true") {
 }
 Write-Host "::set-output name=enableApplicationGateway::$EnableApplicationGateway"
 
-$certDomainNamesJson = (az appconfig kv show -n $configName --key "$StackNameTag/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to get cert domain names from $configName."
-}
-
 if ($EnableApplicationGateway) {
-    $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).applicationgateway
+    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/customer-service" --auth-mode login | ConvertFrom-Json).value
+    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/api" --auth-mode login | ConvertFrom-Json).value
+    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/member-portal" --auth-mode login | ConvertFrom-Json).value
 }
 else {
-    $certDomainNames = ($certDomainNamesJson | ConvertFrom-Json).ingress
+    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
+    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
+    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value
 }
-
-
-$customerServiceDomain = $certDomainNames.customerservice
-$apiDomain = $certDomainNames.api
-$memberPortalDomain = $certDomainNames.memberPortal
 
 Write-Host "::set-output name=customerServiceHostName::$customerServiceDomain"
 Write-Host "::set-output name=apiHostName::$apiDomain"
 Write-Host "::set-output name=memberHostName::$memberPortalDomain"
 
-$pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-$pipResId = $pipRes.id
+$pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
+$pipResId = $pip.id
 Write-Host "::set-output name=pipResId::$pipResId"
