@@ -124,7 +124,7 @@ module sql './sql.bicep' = {
   }
 }
 
-resource wks 'Microsoft.OperationalInsights/workspaces@2021-06-01' = {
+resource wks 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: stackName
   location: location
   properties: {
@@ -139,7 +139,7 @@ resource wks 'Microsoft.OperationalInsights/workspaces@2021-06-01' = {
 // The NMI pods will fail to run with error AAD Pod Identity is not supported for Kubenet.
 // https://github.com/Azure/aad-pod-identity/blob/master/website/content/en/docs/Configure/aad_pod_identity_on_kubenet.md
 
-resource aks 'Microsoft.ContainerService/managedClusters@2022-08-03-preview' = {
+resource aks 'Microsoft.ContainerService/managedClusters@2022-07-01' = {
   name: stackName
   location: location
   identity: {
