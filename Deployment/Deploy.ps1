@@ -198,7 +198,7 @@ else {
 
     $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
     $ip = $pip.ipAddress    
-    $ipFqdn = "contosocoffeehouseapps"
+    $ipFqdn = $aks.name
     $ipResGroup = $pipRes.resourceGroup
 
     Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
