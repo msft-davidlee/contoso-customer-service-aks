@@ -11,7 +11,7 @@ The information contained in this README.md file and any accompanying materials 
 Follow the steps below to create this demo.
 
 1. [Fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) this git repo.
-2. Follow the [governance](https://github.com/msft-davidlee/contoso-governance) which will allow you to create a service principal and have the correct role assignment to the app-service specified resource groups.
+2. Follow the [governance](https://github.com/msft-davidlee/contoso-governance) which will allow you to create a service principal and have the correct role assignment to the aks specified resource groups.
 3. Follow the [networking](https://github.com/msft-davidlee/contoso-networking) steps to create the networks.
 4. Follow the [application](https://github.com/msft-davidlee/contoso-customer-service-app) steps to create application artifacts.
 5. Create 2 environments, prod and dev and create a secret PREFIX which is used to name your resources with in each environment.
@@ -42,25 +42,11 @@ If you did not enable Frontdoor or Application Gateway, the deployment would def
 
 ## Deploying Frontdoor
 
-If you are deploying Frontdoor. Frontdoor by already has its domain name with SSL cert and that's what we will be using. 
-
-After that, in the App Configuration, you will need to configure the follow to enable Frontdoor.
-
-| Name | Comments |
-| --- | --- |
-| Key | contoso-customer-service-app-service/deployment-flags/enable-frontdoor |
-| Label | dev or prod |
-| Value | true or false |
+1. Enable Azure Front Door deployment option in your shared Azure App Configuration created as part of the [governance](https://github.com/msft-davidlee/contoso-governance) setup step. Use key ``` aks-demo/deployment-flags/enable-frontdoor ``` with 2 labels dev or prod and value of true to create or false to disable.
 
 ## Deploying Application Gateway
 
-If you are deploying Application Gateway, you should note that we will be using the Application Gateway Ingress Controller (AGIC)in this demo. To enable this configuration, you will need to follow the steps below to enable Application Gateway.
-
-| Name | Comments |
-| --- | --- |
-| Key | contoso-customer-service-app-service/deployment-flags/enable-app-gateway |
-| Label | dev or prod |
-| Value | true or false |
+1. Enable Azure Application Gateway deployment option in your shared Azure App Configuration created as part of the [governance](https://github.com/msft-davidlee/contoso-governance) setup step. Use key ``` aks-demo/deployment-flags/enable-app-gateway ``` with 2 labels dev or prod and value of true to create or false to disable.
 
 ### Deploying Application Gateway Issue(s)
 
@@ -68,7 +54,7 @@ If you are deploying Application Gateway, you should note that we will be using 
 
 ## Performance Testing
 
-For running a performance test, you can craft a payload against the Order endpoint https://api.contoso.com/partner/order with the following body using the HTTP POST verb. I suggest using postman.
+For running a performance test, you can craft a payload against the Order endpoint ``` https://<api sub domain name>/partner/order ``` with the following body using the HTTP POST verb. I suggest using postman.
 
 ```json
 {
@@ -81,7 +67,7 @@ For running a performance test, you can craft a payload against the Order endpoi
 2. To watch for running pods, run the following command ``` kubectl get pods -o=name --field-selector=status.phase=Running -n myapps --watch ```
 3. To observe the HPA in action, run ``` kubectl describe hpa -n myapps ``` For a simple version, run ``` kubectl get hpa -n myapps ```
 4. You can also review the insights view of your AKS cluster as well as Storage insights for how the "db" is handling your load.
-5. When you navigate to https://demo.contoso.com, you will be able to redirect to Prometheus to view the requests. Try the following command to see the load: ``` nginx_ingress_controller_requests ```
+5. When you navigate to customer service app sub-domain name, you will be able to redirect to Prometheus to view the requests. Try the following command to see the load: ``` nginx_ingress_controller_requests ```
 6. Next try the following to look at request per service such as customer service. ``` sum(rate(nginx_ingress_controller_requests{service='customerservice'}[1m])) ```
 
 ## Troubleshooting

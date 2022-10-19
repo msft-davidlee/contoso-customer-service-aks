@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$ApiDomainName, 
     [Parameter(Mandatory = $true)][string]$MemberPortalDomainName)
 
-$ArdSolutionId = "app-service-demo"
+$ArdSolutionId = "aks-demo"
 $config = (az resource list --tag ard-resource-id=shared-app-configuration | ConvertFrom-Json)
 if (!$config) {
     throw "Unable to find App Config resource!"

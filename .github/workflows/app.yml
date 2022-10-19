@@ -11,7 +11,7 @@ on:
         required: false
 env:
   APP_VERSION: 'v6.2'
-  ARD_SOLUTION_ID_TAG: 'app-service-demo'
+  ARD_SOLUTION_ID_TAG: 'aks-demo'
 
 jobs:
   setup:
@@ -51,7 +51,7 @@ jobs:
       - name: Azure CLI Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true
 
       - id: resolve-shared-resources
@@ -106,7 +106,7 @@ jobs:
       - name: Azure CLI Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true
 
       - id: appsdeploy
@@ -136,7 +136,7 @@ jobs:
       - name: Azure CLI Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true
 
       - id: resolve-sql-connectionstring
