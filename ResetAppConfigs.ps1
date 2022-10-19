@@ -19,10 +19,10 @@ az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/enable
 az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/queue-type" --label dev --auth-mode login --value Storage --yes
 az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/queue-type" --label prod --auth-mode login --value Storage --yes
 
-az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/cert-domain-names/app-gateway/customer-service" --auth-mode login --value $CustomerServiceDomainName --yes
-az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/cert-domain-names/app-gateway/api" --auth-mode login --value $ApiDomainName --yes
-az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/cert-domain-names/app-gateway/member-portal" --auth-mode login --value $MemberPortalDomainName --yes
+az appconfig kv set -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/customer-service" --auth-mode login --value $CustomerServiceDomainName --yes
+az appconfig kv set -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/api" --auth-mode login --value $ApiDomainName --yes
+az appconfig kv set -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/member-portal" --auth-mode login --value $MemberPortalDomainName --yes
 
-az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/cert-domain-names/ingress/customer-service" --auth-mode login --value $CustomerServiceDomainName --yes
-az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/cert-domain-names/ingress/api" --auth-mode login --value $ApiDomainName --yes
-az appconfig kv set -n $configName --key "$ArdSolutionId/deployment-flags/cert-domain-names/ingress/member-portal" --auth-mode login --value $MemberPortalDomainName --yes
+az appconfig kv set -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login --value $CustomerServiceDomainName --yes
+az appconfig kv set -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login --value $ApiDomainName --yes
+az appconfig kv set -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login --value $MemberPortalDomainName --yes
