@@ -12,6 +12,7 @@ on:
 env:
   APP_VERSION: 'v6.2'
   ARD_SOLUTION_ID_TAG: 'aks-demo'
+  BACKEND_FUNC_STORAGE_SUFFIX: 'backend'
 
 jobs:
   setup:
@@ -82,7 +83,6 @@ jobs:
             nodesResourceGroup=${{ steps.resolve-shared-resources.outputs.nodesResourceGroup }}
             subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
-            backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             storageQueueSuffix=${{ env.STORAGE_QUEUE_SUFFIX }}
             publicIPResId=${{ steps.resolve-shared-resources.outputs.pipResId }}
             enableAppGateway=${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
@@ -96,7 +96,7 @@ jobs:
   deploy_apps:
     name: Deploy apps
     needs:
-      - setup      
+      - setup
       - cd_deploy
     runs-on: windows-latest
     environment: ${{ needs.setup.outputs.build_env }}
@@ -126,7 +126,7 @@ jobs:
   deploy_db:
     name: Deploy database
     needs:
-      - setup      
+      - setup
       - cd_deploy
     runs-on: windows-latest
     environment: ${{ needs.setup.outputs.build_env }}
