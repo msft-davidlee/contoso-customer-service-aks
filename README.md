@@ -46,6 +46,8 @@ If you did not enable Frontdoor or Application Gateway, the deployment would def
 
 1. There is an issue with the Ngix Ingress Controller where the Kubernetes Load Balancer's health check probes would NOT be configured correctly. The path is configured as just / but really needs to be /healthz. You would need to fix this manually.
 
+![AKS Load Balancer Issue](/Docs/LoadBalancerIssue.png)
+
 ## Deploying Frontdoor
 
 1. Enable Azure Front Door deployment option in your shared Azure App Configuration created as part of the [governance](https://github.com/msft-davidlee/contoso-governance) setup step. Use key ``` aks-demo/deployment-flags/enable-frontdoor ``` with 2 labels dev or prod and value of true to create or false to disable.

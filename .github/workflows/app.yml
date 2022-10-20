@@ -4,6 +4,7 @@ on:
       - 'README.md'
       - 'CompleteSetup.ps1'
       - 'FixApplicationGatewayRoute.ps1'
+      - 'Docs/**'
   workflow_dispatch:
     inputs:
       environmentselector:
