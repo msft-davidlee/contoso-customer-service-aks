@@ -79,7 +79,7 @@ $AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --v
 
 $log = $all | Where-Object { $_.type -eq 'microsoft.insights/components' }
 az extension add --name application-insights
-$appInsightsKey = az monitor app-insights component show --app $log.name -g $log.resourceGroup --query "instrumentationKey" -o tsv
+$appInsightsKey = az monitor app-insights component show --app $log.name -g $log.resourceGroup --query "connectionString" -o tsv
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable get app insights instrumentation key."
 }

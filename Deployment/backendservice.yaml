@@ -44,7 +44,7 @@ spec:
               value: $DBNAME
             - name: DbUserId
               value: $DBUSERID
-            - name: AppInsightsInstrumentationKey
+            - name: APPLICATIONINSIGHTS_CONNECTION_STRING
               value: $APPINSIGHTSKEY
             - name: DbPassword
               valueFrom:
