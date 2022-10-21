@@ -189,7 +189,6 @@ resource aks 'Microsoft.ContainerService/managedClusters@2022-08-03-preview' = {
   }
 }
 
-output aksName string = aks.name
 output managedIdentityId string = aks.properties.addonProfiles.azureKeyvaultSecretsProvider.identity.clientId
 
 resource backendappStr 'Microsoft.Storage/storageAccounts@2022-05-01' = {

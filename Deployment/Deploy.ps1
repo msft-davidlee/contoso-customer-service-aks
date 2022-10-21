@@ -196,13 +196,17 @@ else {
         throw "Unable to find eligible shared key vault resource!"
     }
 
+    $ipFqdn = $aks.name
+
     $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
     $ipResGroup = $pip.resourceGroup
+
+    # We need to do this step manually to ensure the dnsName is applied correctly and not rely on the helm ingress code below.
+    az network public-ip update --name $pip.name -g $ipResGroup --dns-name $ipFqdn
     $ip = az network public-ip show --name $pip.name -g $ipResGroup --query ipAddress -o tsv
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to get public ip address"
     }
-    $ipFqdn = $aks.name
 
     Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
 
