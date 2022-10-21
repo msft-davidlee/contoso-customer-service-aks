@@ -32,6 +32,10 @@ Follow the steps below to create this demo.
 13. Once this is completed, you can now choose to run ONLY the steps that failed i.e. "Deploy Apps" step to save time. It should be successful this time.
 14. To teardown your solution, run ``` .\RemoveSolution.ps1 -ArdSolutionId app-service-demo -ArdEnvironment <either dev or prod> ```
 
+### AZURE_CREDENTIALS
+
+In order to connect to your Azure Subscription, we will need to use a service principal. You should have created a AZURE_CREDENTIALS secret in [Contoso Governance](https://github.com/msft-davidlee/contoso-governance). If this is missed, please review.
+
 ## Why do we need to run CompleteSetup.ps1 script?
 
 We need to associate access between AKS and ACR and that requires a higher level of privilege than a Contributor role. We are using a Service Principal to run GitHub Action which means we now have to assign a role assignment permission to this GitHub Service Principal which is not a good practice. I prefer this step to be manually executed by a real person, i.e. DevOps engineer for any form of role assignments. This is because this is really a one-time only assignment in most cases and if we deploy new code, this is not necessary anymore.
