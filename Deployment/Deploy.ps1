@@ -534,9 +534,3 @@ if ($LastExitCode -ne 0) {
 else {
     Write-Host "Applied ingress config."    
 }
-
-if ($EnableApplicationGateway -ne "true") {
-    # Step 12: Output ip address
-    $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
-    Write-Host "::set-output name=serviceip::$serviceip"
-}
