@@ -81,7 +81,7 @@ $log = $all | Where-Object { $_.type -eq 'microsoft.insights/components' }
 az extension add --name application-insights
 $appInsightsKey = az monitor app-insights component show --app $log.name -g $log.resourceGroup --query "connectionString" -o tsv
 if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable get app insights instrumentation key."
+    throw "An error has occured. Unable get app insights connection string."
 }
 
 $config = (az resource list --tag ard-resource-id=shared-app-configuration | ConvertFrom-Json)
