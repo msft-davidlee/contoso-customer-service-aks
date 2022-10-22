@@ -11,7 +11,7 @@ on:
         description: 'Environment selector'
         required: false
 env:
-  APP_VERSION: 'v6.4-dev'
+  APP_VERSION: 'v6.5-dev'
   ARD_SOLUTION_ID_TAG: 'aks-demo'
   BACKEND_FUNC_STORAGE_SUFFIX: 'backend'
   STORAGE_QUEUE_SUFFIX: 'db'
