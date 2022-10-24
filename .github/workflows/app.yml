@@ -30,14 +30,14 @@ jobs:
             Write-Host "Using github.ref for choosing build_env"      
             if ('${{ github.ref }}' -eq 'refs/heads/main') {
               Write-Host "Using prod for build_env"
-              echo "::set-output name=build_env::prod"
+              echo "build_env=prod" >> $env:GITHUB_OUTPUT
             } else {
               Write-Host "Using dev for build_env"
-              echo "::set-output name=build_env::dev"
+              echo "build_env=dev" >> $env:GITHUB_OUTPUT
             }
           } else {
             Write-Host "Using input for build_env"
-            echo "::set-output name=build_env::$envSelector"            
+            echo "build_env=$envSelector" >> $env:GITHUB_OUTPUT           
           }
     outputs:
       build_env: ${{ steps.setup.outputs.build_env }}

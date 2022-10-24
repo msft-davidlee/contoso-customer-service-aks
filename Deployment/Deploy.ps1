@@ -52,7 +52,7 @@ if ($count -lt 3) {
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
-Write-Host "::set-output name=aksName::$AKS_NAME"
+"aksName=$AKS_NAME" >> $env:GITHUB_OUTPUT
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json

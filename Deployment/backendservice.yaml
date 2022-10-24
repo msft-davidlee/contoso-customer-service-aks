@@ -22,14 +22,8 @@ spec:
         - name: backendservice
           image: $ACRNAME.azurecr.io/$IMAGE
           env:
-            - name: AzureWebJobsDashboard
-              value: "$AZURE_STORAGE_CONNECTION"
             - name: AzureWebJobsStorage
               value: "$AZURE_STORAGE_CONNECTION"
-            - name: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING
-              value: "$AZURE_STORAGE_CONNECTION"
-            - name: WEBSITE_CONTENTSHARE
-              value: "functions2022"
             - name: Connection
               value: "$AZURE_STORAGEQUEUE_CONNECTION"
             - name: FUNCTIONS_WORKER_RUNTIME
