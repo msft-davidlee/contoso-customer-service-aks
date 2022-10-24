@@ -26,7 +26,7 @@ $subnetId = ($subnets | Where-Object { $_.name -eq "aks" }).id
 if (!$subnetId) {
     throw "Unable to find default Subnet resource!"
 }
-Write-Host "subnetId=$subnetId" >> $env:GITHUB_OUTPUT
+"subnetId=$subnetId" >> $env:GITHUB_OUTPUT
 
 $appGwSubnetId = ($subnets | Where-Object { $_.name -eq "appgw" }).id
 "appGwSubnetId=$appGwSubnetId" >> $env:GITHUB_OUTPUT
