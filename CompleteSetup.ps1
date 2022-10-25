@@ -7,6 +7,14 @@ $ArdSolutionId = "aks-demo"
 $groups = az group list --tag ard-environment=$ArdEnvironment | ConvertFrom-Json
 $resourceGroupName = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId -and !$_.tags.'aks-managed-cluster-rg' }).name
 $aks = (az resource list -g $resourceGroupName --resource-type "Microsoft.ContainerService/managedClusters" | ConvertFrom-Json)[0]
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Error locating AKS."
+}
+
+if (!$aks) {
+    throw "Unable to locate AKS."
+}
+
 az aks get-credentials -n $aks.name -g $resourceGroupName --overwrite-existing
 $acr = (az resource list --tag ard-resource-id=shared-container-registry | ConvertFrom-Json)
 $acrName = $acr.name

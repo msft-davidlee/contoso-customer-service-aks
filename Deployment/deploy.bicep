@@ -215,23 +215,6 @@ resource backendappStr 'Microsoft.Storage/storageAccounts@2022-05-01' = {
 
 output queueName string = queueName
 
-// We don't actually need to create this because it should be created automatically.
-// However, we would like it to be tagged so that's why we are defining it here.
-var containerInsightsName = 'ContainerInsights(${wks.name})'
-resource containerinsights 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' = {
-  name: containerInsightsName
-  location: location
-  plan: {
-    name: containerInsightsName
-    promotionCode: ''
-    product: 'OMSGallery/ContainerInsights'
-    publisher: 'Microsoft'
-  }
-  properties: {
-    workspaceResourceId: wks.id
-  }
-}
-
 resource appGw 'Microsoft.Network/applicationGateways@2022-05-01' = if (enableAppGateway == 'true') {
   name: stackName
   location: location
