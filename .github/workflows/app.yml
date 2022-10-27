@@ -4,16 +4,17 @@ on:
       - 'README.md'
       - 'CompleteSetup.ps1'
       - 'FixApplicationGatewayRoute.ps1'
+      - 'Docs/**'
   workflow_dispatch:
     inputs:
       environmentselector:
         description: 'Environment selector'
         required: false
 env:
-  APP_VERSION: 'v5.16'
-  BACKEND_FUNC_STORAGE_SUFFIX: 'backendapp'
+  APP_VERSION: 'v6.8'
+  ARD_SOLUTION_ID_TAG: 'aks-demo'
+  BACKEND_FUNC_STORAGE_SUFFIX: 'backend'
   STORAGE_QUEUE_SUFFIX: 'db'
-  STACK_NAME_TAG: 'contoso-customer-service-aks'
 
 jobs:
   setup:
@@ -29,14 +30,14 @@ jobs:
             Write-Host "Using github.ref for choosing build_env"      
             if ('${{ github.ref }}' -eq 'refs/heads/main') {
               Write-Host "Using prod for build_env"
-              echo "::set-output name=build_env::prod"
+              echo "build_env=prod" >> $env:GITHUB_OUTPUT
             } else {
               Write-Host "Using dev for build_env"
-              echo "::set-output name=build_env::dev"
+              echo "build_env=dev" >> $env:GITHUB_OUTPUT
             }
           } else {
             Write-Host "Using input for build_env"
-            echo "::set-output name=build_env::$envSelector"            
+            echo "build_env=$envSelector" >> $env:GITHUB_OUTPUT           
           }
     outputs:
       build_env: ${{ steps.setup.outputs.build_env }}
@@ -53,23 +54,16 @@ jobs:
       - name: Azure CLI Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true
-
-      - id: removedevresources
-        if: needs.setup.outputs.build_env == 'prod'
-        name: Remove Dev Resources
-        run: |
-          .\Deployment\RemoveDevResources.ps1 -StackNameTag ${{ env.STACK_NAME_TAG }}
 
       - id: resolve-shared-resources
         name: Resolve shared resources
         working-directory: .\deployment
         run: |
           .\ResolveSharedResources.ps1 `
-          -stackNameTag ${{ env.STACK_NAME_TAG }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
-          -Prefix ${{ secrets.PREFIX }}
+          -ArdSolutionId ${{ env.ARD_SOLUTION_ID_TAG }} `
+          -ArdEnvironment ${{ needs.setup.outputs.build_env }}
 
       - name: Build azure environment
         id: deploy
@@ -83,17 +77,15 @@ jobs:
             location=${{ steps.resolve-shared-resources.outputs.location }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             queueType=${{ steps.resolve-shared-resources.outputs.queueType }}
-            prefix=${{ secrets.PREFIX }}
+            prefix=${{ steps.resolve-shared-resources.outputs.deploymentPrefix }}
             appEnvironment=${{ needs.setup.outputs.build_env }}
-            branch=${{ github.ref }}
             keyVaultName=${{ steps.resolve-shared-resources.outputs.keyVaultName }}
             sharedResourceGroup=${{ steps.resolve-shared-resources.outputs.sharedResourceGroup }}
             nodesResourceGroup=${{ steps.resolve-shared-resources.outputs.nodesResourceGroup }}
+            backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             subnetId=${{ steps.resolve-shared-resources.outputs.subnetId }}
             aksMSIId=${{ steps.resolve-shared-resources.outputs.managedIdentityId }}
-            backendFuncStorageSuffix=${{ env.BACKEND_FUNC_STORAGE_SUFFIX }}
             storageQueueSuffix=${{ env.STORAGE_QUEUE_SUFFIX }}
-            stackNameTag=${{ env.STACK_NAME_TAG }}
             publicIPResId=${{ steps.resolve-shared-resources.outputs.pipResId }}
             enableAppGateway=${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
             appGwSubnetId=${{ steps.resolve-shared-resources.outputs.appGwSubnetId }}
@@ -106,7 +98,7 @@ jobs:
   deploy_apps:
     name: Deploy apps
     needs:
-      - setup      
+      - setup
       - cd_deploy
     runs-on: windows-latest
     environment: ${{ needs.setup.outputs.build_env }}
@@ -116,7 +108,7 @@ jobs:
       - name: Azure CLI Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true
 
       - id: appsdeploy
@@ -125,18 +117,18 @@ jobs:
           .\Deployment\Deploy.ps1 `
           -QueueName ${{ needs.cd_deploy.outputs.queueName }} `
           -QueueType ${{ needs.cd_deploy.outputs.queueType }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
+          -ArdEnvironment ${{ needs.setup.outputs.build_env }} `
           -APP_VERSION ${{ env.APP_VERSION }} `
           -AKSMSIId ${{ needs.cd_deploy.outputs.managedIdentityId }} `
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
           -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
-          -STACK_NAME_TAG ${{ env.STACK_NAME_TAG }} `
+          -ArdSolutionId ${{ env.ARD_SOLUTION_ID_TAG }} `
           -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
 
   deploy_db:
     name: Deploy database
     needs:
-      - setup      
+      - setup
       - cd_deploy
     runs-on: windows-latest
     environment: ${{ needs.setup.outputs.build_env }}
@@ -146,7 +138,7 @@ jobs:
       - name: Azure CLI Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.MS_AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true
 
       - id: resolve-sql-connectionstring
@@ -155,8 +147,8 @@ jobs:
         run: |
           .\ResolveSqlConnection.ps1 `
           -APP_VERSION ${{ env.APP_VERSION }} `
-          -BUILD_ENV ${{ needs.setup.outputs.build_env }} `
-          -StackNameTag ${{ env.STACK_NAME_TAG }} `
+          -ArdEnvironment ${{ needs.setup.outputs.build_env }} `
+          -ArdSolutionId ${{ env.ARD_SOLUTION_ID_TAG }} `
           -TEMPDIR ${{ github.workspace }}
 
       - id: deploy_db

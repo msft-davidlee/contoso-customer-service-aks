@@ -1,12 +1,22 @@
-param([Parameter(Mandatory = $true)][string]$BUILD_ENV)
+param([Parameter(Mandatory = $true)][string]$ArdEnvironment)
 
 $ErrorActionPreference = "Stop"
 
-$groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
-$resourceGroupName = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' -and $_.tags.'stack-environment' -eq $BUILD_ENV }).name
+$ArdSolutionId = "aks-demo"
+
+$groups = az group list --tag ard-environment=$ArdEnvironment | ConvertFrom-Json
+$resourceGroupName = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId -and !$_.tags.'aks-managed-cluster-rg' }).name
 $aks = (az resource list -g $resourceGroupName --resource-type "Microsoft.ContainerService/managedClusters" | ConvertFrom-Json)[0]
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Error locating AKS."
+}
+
+if (!$aks) {
+    throw "Unable to locate AKS."
+}
+
 az aks get-credentials -n $aks.name -g $resourceGroupName --overwrite-existing
-$acr = (az resource list --tag stack-name='shared-container-registry' | ConvertFrom-Json)[0]
+$acr = (az resource list --tag ard-resource-id=shared-container-registry | ConvertFrom-Json)
 $acrName = $acr.name
 az aks update -n $aks.name -g $resourceGroupName --attach-acr $acrName
 if ($LastExitCode -ne 0) {

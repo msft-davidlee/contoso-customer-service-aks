@@ -1,32 +1,14 @@
 param(
-    [Parameter(Mandatory = $true)][string]$BUILD_ENV,
+    [Parameter(Mandatory = $true)][string]$ArdEnvironment,
     [Parameter(Mandatory = $true)][string]$QueueName,
     [Parameter(Mandatory = $true)][string]$QueueType,
     [Parameter(Mandatory = $true)][string]$AKSMSIId,
     [Parameter(Mandatory = $true)][string]$APP_VERSION,
     [Parameter(Mandatory = $true)][string]$BACKEND_FUNC_STORAGE_SUFFIX,
     [Parameter(Mandatory = $true)][string]$STORAGE_QUEUE_SUFFIX,
-    [Parameter(Mandatory = $true)][string]$STACK_NAME_TAG,
+    [Parameter(Mandatory = $true)][string]$ArdSolutionId,
     [Parameter(Mandatory = $true)][string]$EnableApplicationGateway)
 
-function GetResource([string]$stackName, [string]$stackEnvironment) {
-    $platformRes = (az resource list --tag stack-name=$stackName | ConvertFrom-Json)
-    if (!$platformRes) {
-        throw "Unable to find eligible $stackName resource!"
-    }
-
-    if ($platformRes.Length -eq 0) {
-        throw "Unable to find 'ANY' eligible $stackName resource!"
-    }
-
-    $res = ($platformRes | Where-Object { $_.tags.'stack-environment' -eq $stackEnvironment })
-
-    if (!$res) {
-        throw "Unable to find resource by environment for $stackName!"
-    }
-        
-    return $res
-}
 $ErrorActionPreference = "Stop"
 
 # This is because the deploy.bicep is using the notation of skip but our powershell script
@@ -38,12 +20,13 @@ if ($EnableApplicationGateway -eq "skip") {
 # Prerequsites: 
 # * We have already assigned the managed identity with a role in Container Registry with AcrPull role.
 # * We also need to determine if the environment is created properly with the right Azure resources.
-$all = GetResource -stackName $STACK_NAME_TAG -stackEnvironment $BUILD_ENV
+$all = az resource list --tag ard-solution-id=$ArdSolutionId | ConvertFrom-Json
+$all = $all | Where-Object { $_.tags.'ard-environment' -eq $ArdEnvironment }
 $aks = $all | Where-Object { $_.type -eq 'Microsoft.ContainerService/managedClusters' }
 $AKS_RESOURCE_GROUP = $aks.resourceGroup
 $AKS_NAME = $aks.name
 
-$acr = GetResource -stackName shared-container-registry -stackEnvironment prod
+$acr = (az resource list --tag ard-resource-id=shared-container-registry | ConvertFrom-Json)
 $acrName = $acr.Name
 
 $allMessages = (az aks check-acr -n $AKS_NAME -g $AKS_RESOURCE_GROUP --acr "$acrName.azurecr.io" 2>&1)
@@ -69,7 +52,7 @@ if ($count -lt 3) {
 
 # Step 2: Login to AKS.
 az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME
-Write-Host "::set-output name=aksName::$AKS_NAME"
+"aksName=$AKS_NAME" >> $env:GITHUB_OUTPUT
 
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
@@ -80,7 +63,10 @@ $db = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers/databases' }
 $dbNameParts = $db.name.Split('/')
 $DbName = $dbNameParts[1]
 
-$kv = GetResource -stackName shared-key-vault -stackEnvironment prod
+$kv = (az resource list --tag ard-resource-id=shared-key-vault | ConvertFrom-Json)
+if (!$kv) {
+    throw "Unable to find eligible shared key vault resource!"
+}
 $KeyVaultName = $kv.name
 
 $AAD_INSTANCE = (az keyvault secret show -n contoso-customer-service-aad-instance --vault-name $KeyVaultName --query value | ConvertFrom-Json)
@@ -93,24 +79,17 @@ $AAD_SCOPES = (az keyvault secret show -n contoso-customer-service-aad-scope --v
 
 $log = $all | Where-Object { $_.type -eq 'microsoft.insights/components' }
 az extension add --name application-insights
-$appInsightsKey = az monitor app-insights component show --app $log.name -g $log.resourceGroup --query "instrumentationKey" -o tsv
+$appInsightsKey = az monitor app-insights component show --app $log.name -g $log.resourceGroup --query "connectionString" -o tsv
 if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable get app insights instrumentation key."
+    throw "An error has occured. Unable get app insights connection string."
 }
 
-$config = GetResource -stackName shared-configuration -stackEnvironment prod
+$config = (az resource list --tag ard-resource-id=shared-app-configuration | ConvertFrom-Json)
 $configName = $config.name
 
-$certDomainNamesJson = (az appconfig kv show -n $configName --key "$STACK_NAME_TAG/cert-domain-names" --auth-mode login | ConvertFrom-Json).value
-if ($LastExitCode -ne 0) {
-    throw "An error has occured. Unable to get cert domain names from $configName."
-}
-
-$certDomainNames = $certDomainNamesJson | ConvertFrom-Json
-
-$customerServiceDomain = $certDomainNames.ingress.customerservice
-$apiDomain = $certDomainNames.ingress.api
-$memberPortalDomain = $certDomainNames.ingress.memberPortal
+$customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
+$apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
+$memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value
 
 if (!$customerServiceDomain) {
     throw "Unable to get Customer Service Domain"
@@ -163,7 +142,10 @@ helm repo update
 $testSecret = (kubectl get secret aks-csv-tls -o json -n $namespace)
 if (!$testSecret) {
 
-    $strs = GetResource -stackName shared-storage -stackEnvironment prod
+    $strs = (az resource list --tag ard-resource-id=shared-storage | ConvertFrom-Json)
+    if (!$strs) {
+        throw "Unable to find eligible platform storage account!"
+    }
     $BuildAccountName = $strs.name
 
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
@@ -209,11 +191,22 @@ else {
 
     # Public IP is assigned only for Prod which we will reuse.
     # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
-    $pipRes = GetResource -stackName 'aks-public-ip' -stackEnvironment prod
-    $pip = (az network public-ip show --ids $pipRes.id | ConvertFrom-Json)
-    $ip = $pip.ipAddress    
-    $ipFqdn = "contosocoffeehouseapps"
-    $ipResGroup = $pipRes.resourceGroup
+    $networks = (az resource list --tag ard-solution-id=networking-pri | ConvertFrom-Json)
+    if (!$networks) {
+        throw "Unable to find eligible shared key vault resource!"
+    }
+
+    $ipFqdn = $aks.name
+
+    $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
+    $ipResGroup = $pip.resourceGroup
+
+    # We need to do this step manually to ensure the dnsName is applied correctly and not rely on the helm ingress code below.
+    az network public-ip update --name $pip.name -g $ipResGroup --dns-name $ipFqdn
+    $ip = az network public-ip show --name $pip.name -g $ipResGroup --query ipAddress -o tsv
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to get public ip address"
+    }
 
     Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
 
@@ -544,10 +537,4 @@ if ($LastExitCode -ne 0) {
 }
 else {
     Write-Host "Applied ingress config."    
-}
-
-if ($EnableApplicationGateway -ne "true") {
-    # Step 12: Output ip address
-    $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
-    Write-Host "::set-output name=serviceip::$serviceip"
 }
