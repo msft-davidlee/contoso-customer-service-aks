@@ -1,25 +1,13 @@
 param stackName string
-param appEnvironment string
-param branch string
-param version string
 param serviceIP string
-param stackNameTag string
-
-var tags = {
-  'stack-name': stackNameTag
-  'stack-environment': appEnvironment
-  'stack-version': version
-  'stack-branch': branch
-}
 
 var frontendEndpointName = '${stackName}-azurefd-net'
 var backendPoolName = 'customer-service-backend-pool'
 var frontdoorFqdn = '${stackName}.azurefd.net'
 
-resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
+resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
   name: stackName
   location: 'global'
-  tags: tags
   properties: {
     healthProbeSettings: [
       {

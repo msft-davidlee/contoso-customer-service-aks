@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory = $true)][string]$BACKEND_FUNC_STORAGE_SUFFIX,
     [Parameter(Mandatory = $true)][string]$STORAGE_QUEUE_SUFFIX,
     [Parameter(Mandatory = $true)][string]$ArdSolutionId,
-    [Parameter(Mandatory = $true)][string]$EnableApplicationGateway)
+    [Parameter(Mandatory = $true)][string]$EnableApplicationGateway,
+    [Parameter(Mandatory = $true)][string]$EnableFrontdoor)
 
 $ErrorActionPreference = "Stop"
 
@@ -150,20 +151,39 @@ if (!$testSecret) {
 
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
 
-    kubectl create secret tls aks-csv-tls `
-        --namespace $namespace `
-        --key .\cert.key `
-        --cert .\cert.cer
+    if ($EnableFrontdoor) {
+        kubectl create secret tls aks-csv-tls `
+            --namespace $namespace `
+            --key .\fdcert.key `
+            --cert .\fdcert.cer
 
-    kubectl create secret tls aks-api-tls `
-        --namespace $namespace `
-        --key .\cert.key `
-        --cert .\cert.cer
+        kubectl create secret tls aks-api-tls `
+            --namespace $namespace `
+            --key .\fdcert.key `
+            --cert .\fdcert.cer
 
-    kubectl create secret tls aks-mem-tls `
-        --namespace $namespace `
-        --key .\cert.key `
-        --cert .\cert.cer
+        kubectl create secret tls aks-mem-tls `
+            --namespace $namespace `
+            --key .\cert.key `
+            --cert .\cert.cer
+    }
+    else {
+        kubectl create secret tls aks-csv-tls `
+            --namespace $namespace `
+            --key .\cert.key `
+            --cert .\cert.cer
+
+        kubectl create secret tls aks-api-tls `
+            --namespace $namespace `
+            --key .\cert.key `
+            --cert .\cert.cer
+
+        kubectl create secret tls aks-mem-tls `
+            --namespace $namespace `
+            --key .\cert.key `
+            --cert .\cert.cer        
+    }
+
 
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to set TLS for secrets."
@@ -186,41 +206,56 @@ if ($EnableApplicationGateway -eq "true") {
 }
 else {
 
-    # Step 4c. Install ingress controller
-    # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
+    if ($EnableFrontdoor -eq "false") {
+        # Step 4c. Install ingress controller
+        # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 
-    # Public IP is assigned only for Prod which we will reuse.
-    # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
-    $networks = (az resource list --tag ard-solution-id=networking-pri | ConvertFrom-Json)
-    if (!$networks) {
-        throw "Unable to find eligible shared key vault resource!"
+        # Public IP is assigned only for Prod which we will reuse.
+        # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
+        $networks = (az resource list --tag ard-solution-id=networking-pri | ConvertFrom-Json)
+        if (!$networks) {
+            throw "Unable to find eligible shared key vault resource!"
+        }
+
+        $ipFqdn = $aks.name
+
+        $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
+        $ipResGroup = $pip.resourceGroup
+
+        # We need to do this step manually to ensure the dnsName is applied correctly and not rely on the helm ingress code below.
+        az network public-ip update --name $pip.name -g $ipResGroup --dns-name $ipFqdn
+        $ip = az network public-ip show --name $pip.name -g $ipResGroup --query ipAddress -o tsv
+        if ($LastExitCode -ne 0) {
+            throw "An error has occured. Unable to get public ip address"
+        }
+
+        Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
+
+        helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+            --set controller.replicaCount=2 `
+            --set controller.service.loadBalancerIP=$ip `
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
+            --set controller.service.annotations."service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path"="/healthz" `
+            --set controller.nodeSelector."kubernetes\.io/os"=linux `
+            --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
+            --set controller.metrics.enabled=true `
+            --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+            --set-string controller.podAnnotations."prometheus\.io/port"="10254"  
     }
+    else {
 
-    $ipFqdn = $aks.name
+        Write-Host "Configure ingress"
 
-    $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
-    $ipResGroup = $pip.resourceGroup
-
-    # We need to do this step manually to ensure the dnsName is applied correctly and not rely on the helm ingress code below.
-    az network public-ip update --name $pip.name -g $ipResGroup --dns-name $ipFqdn
-    $ip = az network public-ip show --name $pip.name -g $ipResGroup --query ipAddress -o tsv
-    if ($LastExitCode -ne 0) {
-        throw "An error has occured. Unable to get public ip address"
-    }
-
-    Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
-
-    helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-        --set controller.replicaCount=2 `
-        --set controller.service.loadBalancerIP=$ip `
-        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
-        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
-        --set controller.service.annotations."service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path"="/healthz" `
-        --set controller.nodeSelector."kubernetes\.io/os"=linux `
-        --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
-        --set controller.metrics.enabled=true `
-        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254"   
+        helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+            --set controller.replicaCount=2 `
+            --set controller.service.annotations."service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path"="/healthz" `
+            --set controller.nodeSelector."kubernetes\.io/os"=linux `
+            --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
+            --set controller.metrics.enabled=true `
+            --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+            --set-string controller.podAnnotations."prometheus\.io/port"="10254"  
+    } 
 }
 
 helm install keda kedacore/keda -n $namespace
@@ -540,4 +575,10 @@ if ($LastExitCode -ne 0) {
 }
 else {
     Write-Host "Applied ingress config."    
+}
+
+if ($EnableFrontdoor -ne "true") {
+    # Step 12: Output ip address
+    $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+    "serviceip=$serviceip" >> $env:GITHUB_OUTPUT
 }
