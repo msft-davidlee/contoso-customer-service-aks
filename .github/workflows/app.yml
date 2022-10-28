@@ -154,7 +154,7 @@ jobs:
         uses: azure/arm-deploy@v1
         with:
           deploymentName: 'deploy-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}'
-          resourceGroupName: ${{ steps.cd_deploy.outputs.appResourceGroup }}
+          resourceGroupName: ${{ needs.cd_deploy.outputs.appResourceGroup }}
           template: ./deployment/frontdoor.bicep
           parameters: >
             stackName=${{ steps.cd_deploy.outputs.prefix }}
