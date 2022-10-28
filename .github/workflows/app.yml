@@ -126,14 +126,14 @@ jobs:
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
           -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
           -ArdSolutionId ${{ env.ARD_SOLUTION_ID_TAG }} `
-          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
+          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }} `
           -EnableFrontdoor ${{ needs.cd_deploy.outputs.enableFrontdoor }}
     outputs:
       serviceIP: ${{ steps.appsdeploy.outputs.serviceip }}
 
   cd_frontdoor:
     if: ${{ needs.cd_deploy.outputs.enableFrontdoor == 'true' }}
-    name: Deploy frontdoor
+    name: Deploy frontdoor if enabled
     needs:
       - setup
       - cd_deploy
