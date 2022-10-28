@@ -577,7 +577,7 @@ else {
     Write-Host "Applied ingress config."    
 }
 
-if ($EnableFrontdoor -ne "true") {
+if ($EnableFrontdoor -eq "true") {
     # Step 12: Output ip address
     $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
     "serviceip=$serviceip" >> $env:GITHUB_OUTPUT
