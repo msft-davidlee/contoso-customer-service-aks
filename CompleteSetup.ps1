@@ -55,6 +55,6 @@ if ($appGws -and $appGws.Length -eq 1) {
     }
 
     $assignee = (az aks addon show --addon ingress-appgw -n $aksName -g $resourceGroupName | ConvertFrom-Json).identity.objectId
-    $scope = (az identity list -g $resourceGroupName | ConvertFrom-Json).id 
+    $scope = (az identity list -g $acr.resourceGroup | ConvertFrom-Json).id
     az role assignment create --role "Managed Identity Operator" --assignee $assignee --scope $scope
 }

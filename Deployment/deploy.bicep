@@ -296,6 +296,7 @@ resource appGw 'Microsoft.Network/applicationGateways@2022-05-01' = if (enableAp
       {
         name: 'default-routing'
         properties: {
+          priority: 10
           ruleType: 'Basic'
           httpListener: {
             id: resourceId('Microsoft.Network/applicationGateways/httpListeners', stackName, 'default-listener')

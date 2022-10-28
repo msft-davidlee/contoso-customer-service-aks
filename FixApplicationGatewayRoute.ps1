@@ -1,10 +1,12 @@
 # The routing rules configured in Application Gateway are incorrect. This is a temp workaround to
 # address this issue for a working demo.
 
-param([Parameter(Mandatory = $true)][string]$BUILD_ENV)
+param([Parameter(Mandatory = $true)][string]$ArdEnvironment)
 
-$groups = az group list --tag stack-environment=$BUILD_ENV | ConvertFrom-Json
-$resourceGroupName = ($groups | Where-Object { $_.tags.'stack-name' -eq 'aks' -and $_.tags.'stack-environment' -eq $BUILD_ENV }).name
+$ArdSolutionId = "aks-demo"
+
+$groups = az group list --tag ard-environment=$ArdEnvironment | ConvertFrom-Json
+$resourceGroupName = ($groups | Where-Object { $_.tags.'ard-solution-id' -eq $ArdSolutionId -and !$_.tags.'aks-managed-cluster-rg' }).name
 
 $appGw = (az resource list -g $resourceGroupName --resource-type "Microsoft.Network/applicationGateways" | ConvertFrom-Json)[0]
 if ($appGw) {

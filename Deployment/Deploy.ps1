@@ -444,6 +444,9 @@ if ($LastExitCode -ne 0) {
 
 # Step 7: Deploy Member Portal
 $AADINSTANCEB2C = (az keyvault secret show -n contoso-customer-service-b2c-instance --vault-name $KeyVaultName --query value | ConvertFrom-Json)
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable lookup contoso-customer-service-b2c-instance."
+}
 $AADDOMAINB2C = (az keyvault secret show -n contoso-customer-service-b2c-domain --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AADCLIENTIDB2C = (az keyvault secret show -n contoso-customer-service-b2c-client-id --vault-name $KeyVaultName --query value | ConvertFrom-Json)
 $AADPOLICYIDB2C = (az keyvault secret show -n contoso-customer-service-b2c-policy-id --vault-name $KeyVaultName --query value | ConvertFrom-Json)
