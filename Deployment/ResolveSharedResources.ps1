@@ -97,10 +97,15 @@ if ($EnableApplicationGateway -eq "true") {
 }
 "enableApplicationGateway=$EnableApplicationGateway" >> $env:GITHUB_OUTPUT
 
-if ($EnableApplicationGateway) {
-    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/customer-service" --auth-mode login | ConvertFrom-Json).value
-    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/api" --auth-mode login | ConvertFrom-Json).value
-    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/app-gateway/member-portal" --auth-mode login | ConvertFrom-Json).value
+$EnableFrontdoor = (az appconfig kv show -n $configName --key "$ArdSolutionId/deployment-flags/enable-frontdoor" --label $ArdEnvironment --auth-mode login | ConvertFrom-Json).value
+if ($LastExitCode -ne 0) {
+    throw "An error has occured. Unable to get enable-frontdoor flag  from $configName."
+}
+
+if ($EnableFrontdoor -eq "true") {
+    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/customer-service" --auth-mode login | ConvertFrom-Json).value
+    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/api" --auth-mode login | ConvertFrom-Json).value
+    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/member-portal" --auth-mode login | ConvertFrom-Json).value
 }
 else {
     $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
