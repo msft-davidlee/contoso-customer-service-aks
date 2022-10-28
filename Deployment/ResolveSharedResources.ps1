@@ -101,6 +101,7 @@ $EnableFrontdoor = (az appconfig kv show -n $configName --key "$ArdSolutionId/de
 if ($LastExitCode -ne 0) {
     throw "An error has occured. Unable to get enable-frontdoor flag  from $configName."
 }
+"enableFrontdoor=$EnableFrontdoor" >> $env:GITHUB_OUTPUT
 
 if ($EnableFrontdoor -eq "true") {
     $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/customer-service" --auth-mode login | ConvertFrom-Json).value
