@@ -157,8 +157,8 @@ jobs:
           resourceGroupName: ${{ needs.cd_deploy.outputs.appResourceGroup }}
           template: ./deployment/frontdoor.bicep
           parameters: >
-            stackName=${{ steps.cd_deploy.outputs.prefix }}
-            serviceIP=${{ steps.deploy_apps.outputs.serviceIP }}
+            stackName=${{ needs.cd_deploy.outputs.prefix }}
+            serviceIP=${{ needs.deploy_apps.outputs.serviceIP }}
 
   deploy_db:
     name: Deploy database
