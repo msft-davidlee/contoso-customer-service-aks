@@ -20,6 +20,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
           intervalInSeconds: 30
           path: '/'
           protocol: 'Http'
+          enabledState: 'Disabled'
         }
       }
     ]
@@ -35,9 +36,15 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
     ]
     frontendEndpoints: [
       {
-        name: frontendEndpointName
-        properties: {
+        name: frontendEndpointName        
+        properties: {          
           hostName: frontdoorFqdn
+        }
+      }
+      {
+        name: customerServiceDomainName
+        properties: {
+          hostName: customerServiceDomainName
         }
       }
     ]
@@ -70,7 +77,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
         properties: {
           frontendEndpoints: [
             {
-              id: resourceId('Microsoft.Network/frontDoors/frontendEndpoints', stackName, frontendEndpointName)
+              id: resourceId('Microsoft.Network/frontDoors/frontendEndpoints', stackName, customerServiceDomainName)
             }
           ]
           acceptedProtocols: [
@@ -81,7 +88,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
           ]
           routeConfiguration: {
             '@odata.type': '#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration'
-            forwardingProtocol: 'MatchRequest'
+            forwardingProtocol: 'HttpsOnly'
             backendPool: {
               id: resourceId('Microsoft.Network/frontDoors/backendPools', stackName, backendPoolName)
             }
