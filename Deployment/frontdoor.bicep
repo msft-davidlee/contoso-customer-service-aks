@@ -5,6 +5,7 @@ param appEnvironment string
 
 var stackName = '${prefix}${appEnvironment}'
 var frontendEndpointName = '${stackName}-azurefd-net'
+var customerServiceDomainNameFrontEndName = replace(customerServiceDomainName, '.', '-')
 var backendPoolName = 'customer-service-backend-pool'
 var frontdoorFqdn = '${stackName}.azurefd.net'
 
@@ -36,13 +37,13 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
     ]
     frontendEndpoints: [
       {
-        name: frontendEndpointName        
-        properties: {          
+        name: frontendEndpointName
+        properties: {
           hostName: frontdoorFqdn
         }
       }
       {
-        name: customerServiceDomainName
+        name: customerServiceDomainNameFrontEndName
         properties: {
           hostName: customerServiceDomainName
         }
@@ -77,7 +78,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
         properties: {
           frontendEndpoints: [
             {
-              id: resourceId('Microsoft.Network/frontDoors/frontendEndpoints', stackName, customerServiceDomainName)
+              id: resourceId('Microsoft.Network/frontDoors/frontendEndpoints', stackName, customerServiceDomainNameFrontEndName)
             }
           ]
           acceptedProtocols: [
