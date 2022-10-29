@@ -1,7 +1,9 @@
-param stackName string
 param serviceIP string
 param customerServiceDomainName string
+param prefix string
+param appEnvironment string
 
+var stackName = '${prefix}${appEnvironment}'
 var frontendEndpointName = '${stackName}-azurefd-net'
 var backendPoolName = 'customer-service-backend-pool'
 var frontdoorFqdn = '${stackName}.azurefd.net'

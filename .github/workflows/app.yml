@@ -158,7 +158,8 @@ jobs:
           resourceGroupName: ${{ needs.cd_deploy.outputs.appResourceGroup }}
           template: ./deployment/frontdoor.bicep
           parameters: >
-            stackName=${{ needs.cd_deploy.outputs.prefix }}
+            prefix=${{ needs.cd_deploy.outputs.prefix }}
+            appEnvironment=${{ needs.setup.outputs.build_env }}
             serviceIP=${{ needs.deploy_apps.outputs.serviceIP }}
             customerServiceDomainName=${{ needs.deploy_apps.outputs.customerServiceDomainName }}
 
