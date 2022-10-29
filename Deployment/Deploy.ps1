@@ -96,6 +96,8 @@ if (!$customerServiceDomain) {
     throw "Unable to get Customer Service Domain"
 }
 
+"customerServiceDomainName=$customerServiceDomain" >> $env:GITHUB_OUTPUT
+
 if (!$apiDomain) {
     throw "Unable to get API Domain"
 }
@@ -249,7 +251,6 @@ else {
 
         helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
             --set controller.replicaCount=2 `
-            --set controller.service.annotations."service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path"="/healthz" `
             --set controller.nodeSelector."kubernetes\.io/os"=linux `
             --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
             --set controller.metrics.enabled=true `

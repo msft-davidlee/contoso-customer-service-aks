@@ -130,6 +130,7 @@ jobs:
           -EnableFrontdoor ${{ needs.cd_deploy.outputs.enableFrontdoor }}
     outputs:
       serviceIP: ${{ steps.appsdeploy.outputs.serviceip }}
+      customerServiceDomainName: ${{ steps.appsdeploy.outputs.customerServiceDomainName }}
 
   cd_frontdoor:
     if: ${{ needs.cd_deploy.outputs.enableFrontdoor == 'true' }}
@@ -159,6 +160,7 @@ jobs:
           parameters: >
             stackName=${{ needs.cd_deploy.outputs.prefix }}
             serviceIP=${{ needs.deploy_apps.outputs.serviceIP }}
+            customerServiceDomainName=${{ needs.deploy_apps.outputs.customerServiceDomainName }}
 
   deploy_db:
     name: Deploy database

@@ -1,5 +1,6 @@
 param stackName string
 param serviceIP string
+param customerServiceDomainName string
 
 var frontendEndpointName = '${stackName}-azurefd-net'
 var backendPoolName = 'customer-service-backend-pool'
@@ -49,7 +50,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
               httpsPort: 443
               priority: 1
               weight: 50
-              backendHostHeader: frontdoorFqdn
+              backendHostHeader: customerServiceDomainName
             }
           ]
           loadBalancingSettings: {
@@ -78,7 +79,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
           ]
           routeConfiguration: {
             '@odata.type': '#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration'
-            forwardingProtocol: 'HttpOnly'
+            forwardingProtocol: 'MatchRequest'
             backendPool: {
               id: resourceId('Microsoft.Network/frontDoors/backendPools', stackName, backendPoolName)
             }
