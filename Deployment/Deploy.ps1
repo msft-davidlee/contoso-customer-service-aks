@@ -88,9 +88,16 @@ if ($LastExitCode -ne 0) {
 $config = (az resource list --tag ard-resource-id=shared-app-configuration | ConvertFrom-Json)
 $configName = $config.name
 
-$customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
-$apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
-$memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value
+if ($EnableFrontdoor -eq "true") {
+    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/customer-service" --auth-mode login | ConvertFrom-Json).value
+    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/api" --auth-mode login | ConvertFrom-Json).value
+    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/member-portal" --auth-mode login | ConvertFrom-Json).value
+}
+else {
+    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
+    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
+    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value    
+}
 
 if (!$customerServiceDomain) {
     throw "Unable to get Customer Service Domain"
@@ -153,7 +160,7 @@ if (!$testSecret) {
 
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
 
-    if ($EnableFrontdoor) {
+    if ($EnableFrontdoor -eq "true") {
         kubectl create secret tls aks-csv-tls `
             --namespace $namespace `
             --key .\fdcert.key `
@@ -166,8 +173,8 @@ if (!$testSecret) {
 
         kubectl create secret tls aks-mem-tls `
             --namespace $namespace `
-            --key .\cert.key `
-            --cert .\cert.cer
+            --key .\fdcert.key `
+            --cert .\fdcert.cer
     }
     else {
         kubectl create secret tls aks-csv-tls `
@@ -251,6 +258,7 @@ else {
 
         helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
             --set controller.replicaCount=2 `
+            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"="/healthz" `
             --set controller.nodeSelector."kubernetes\.io/os"=linux `
             --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
             --set controller.metrics.enabled=true `
