@@ -1,25 +1,17 @@
-param stackName string
+param customerServiceDomainNameFd string
+param customerServiceDomainName string
+param prefix string
 param appEnvironment string
-param branch string
-param version string
-param serviceIP string
-param stackNameTag string
 
-var tags = {
-  'stack-name': stackNameTag
-  'stack-environment': appEnvironment
-  'stack-version': version
-  'stack-branch': branch
-}
-
+var stackName = '${prefix}${appEnvironment}'
 var frontendEndpointName = '${stackName}-azurefd-net'
+var customerServiceDomainNameFrontEndName = replace(customerServiceDomainNameFd, '.', '-')
 var backendPoolName = 'customer-service-backend-pool'
 var frontdoorFqdn = '${stackName}.azurefd.net'
 
-resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
+resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
   name: stackName
   location: 'global'
-  tags: tags
   properties: {
     healthProbeSettings: [
       {
@@ -27,8 +19,9 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
         properties: {
           healthProbeMethod: 'GET'
           intervalInSeconds: 30
-          path: '/'
-          protocol: 'Http'
+          path: '/health'
+          protocol: 'Https'
+          enabledState: 'Enabled'
         }
       }
     ]
@@ -49,6 +42,12 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
           hostName: frontdoorFqdn
         }
       }
+      {
+        name: customerServiceDomainNameFrontEndName
+        properties: {
+          hostName: customerServiceDomainNameFd
+        }
+      }
     ]
     backendPools: [
       {
@@ -56,12 +55,12 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
         properties: {
           backends: [
             {
-              address: serviceIP
+              address: customerServiceDomainName
               httpPort: 80
               httpsPort: 443
               priority: 1
               weight: 50
-              backendHostHeader: frontdoorFqdn
+              backendHostHeader: customerServiceDomainNameFd
             }
           ]
           loadBalancingSettings: {
@@ -79,7 +78,7 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
         properties: {
           frontendEndpoints: [
             {
-              id: resourceId('Microsoft.Network/frontDoors/frontendEndpoints', stackName, frontendEndpointName)
+              id: resourceId('Microsoft.Network/frontDoors/frontendEndpoints', stackName, customerServiceDomainNameFrontEndName)
             }
           ]
           acceptedProtocols: [
@@ -90,7 +89,7 @@ resource afd 'Microsoft.Network/frontDoors@2020-05-01' = {
           ]
           routeConfiguration: {
             '@odata.type': '#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration'
-            forwardingProtocol: 'HttpOnly'
+            forwardingProtocol: 'HttpsOnly'
             backendPool: {
               id: resourceId('Microsoft.Network/frontDoors/backendPools', stackName, backendPoolName)
             }

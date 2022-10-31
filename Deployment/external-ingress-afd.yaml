@@ -1,0 +1,93 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-ingress
+  namespace: $NAMESPACE
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
+spec:
+  tls:
+    - hosts:
+        - $CUSTOMER_SERVICE_DOMAIN
+      secretName: aks-csv-tls
+    - hosts:
+        - $API_DOMAIN
+      secretName: aks-api-tls
+    - hosts:
+        - $MEMBER_PORTAL_DOMAIN
+      secretName: aks-mem-tls
+    - hosts:
+        - $CUSTOMER_SERVICE_FD_DOMAIN
+      secretName: aks-csv-tls-fd
+    - hosts:
+        - $API_FD_DOMAIN
+      secretName: aks-api-tls-fd
+    - hosts:
+        - $MEMBER_PORTAL_FD_DOMAIN
+      secretName: aks-mem-tls-fd
+  rules:
+    - host: $CUSTOMER_SERVICE_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: customerservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
+    - host: $CUSTOMER_SERVICE_FD_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: customerservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix            
+    - host: $API_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: pointsservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
+    - host: $API_FD_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: pointsservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix            
+    - host: $MEMBER_PORTAL_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: memberportal
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
+    - host: $MEMBER_PORTAL_FD_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: memberportal
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix            

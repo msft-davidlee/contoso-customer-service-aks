@@ -49,7 +49,7 @@ jobs:
     environment: ${{ needs.setup.outputs.build_env }}
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Azure CLI Login
         uses: azure/login@v1
@@ -94,6 +94,9 @@ jobs:
       queueName: ${{ steps.deploy.outputs.queueName }}
       queueType: ${{ steps.resolve-shared-resources.outputs.queueType }}
       enableApplicationGateway: ${{ steps.resolve-shared-resources.outputs.enableApplicationGateway }}
+      enableFrontdoor: ${{ steps.resolve-shared-resources.outputs.enableFrontdoor }}
+      appResourceGroup: ${{ steps.resolve-shared-resources.outputs.appResourceGroup }}
+      prefix: ${{ steps.resolve-shared-resources.outputs.deploymentPrefix }}
 
   deploy_apps:
     name: Deploy apps
@@ -103,7 +106,7 @@ jobs:
     runs-on: windows-latest
     environment: ${{ needs.setup.outputs.build_env }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Azure CLI Login
         uses: azure/login@v1
@@ -123,7 +126,42 @@ jobs:
           -BACKEND_FUNC_STORAGE_SUFFIX ${{ env.BACKEND_FUNC_STORAGE_SUFFIX }} `
           -STORAGE_QUEUE_SUFFIX ${{ env.STORAGE_QUEUE_SUFFIX }} `
           -ArdSolutionId ${{ env.ARD_SOLUTION_ID_TAG }} `
-          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }}
+          -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }} `
+          -EnableFrontdoor ${{ needs.cd_deploy.outputs.enableFrontdoor }}
+    outputs:
+      customerServiceDomainNameFd: ${{ steps.appsdeploy.outputs.customerServiceDomainNameFd }}
+      customerServiceDomainName: ${{ steps.appsdeploy.outputs.customerServiceDomainName }}
+
+  cd_frontdoor:
+    if: ${{ needs.cd_deploy.outputs.enableFrontdoor == 'true' }}
+    name: Deploy frontdoor if enabled
+    needs:
+      - setup
+      - cd_deploy
+      - deploy_apps
+    runs-on: windows-latest
+    environment: ${{ needs.setup.outputs.build_env }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          enable-AzPSSession: true
+
+      - name: Add frontdoor
+        id: deploy_frontdoor
+        uses: azure/arm-deploy@v1
+        with:
+          deploymentName: 'deploy-${{ needs.setup.outputs.build_env }}-${{ github.run_number }}-fd'
+          resourceGroupName: ${{ needs.cd_deploy.outputs.appResourceGroup }}
+          template: ./deployment/frontdoor.bicep
+          parameters: >
+            prefix=${{ needs.cd_deploy.outputs.prefix }}
+            appEnvironment=${{ needs.setup.outputs.build_env }}
+            customerServiceDomainNameFd=${{ needs.deploy_apps.outputs.customerServiceDomainNameFd }}
+            customerServiceDomainName=${{ needs.deploy_apps.outputs.customerServiceDomainName }}
 
   deploy_db:
     name: Deploy database
@@ -133,7 +171,7 @@ jobs:
     runs-on: windows-latest
     environment: ${{ needs.setup.outputs.build_env }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Azure CLI Login
         uses: azure/login@v1

@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory = $true)][string]$BACKEND_FUNC_STORAGE_SUFFIX,
     [Parameter(Mandatory = $true)][string]$STORAGE_QUEUE_SUFFIX,
     [Parameter(Mandatory = $true)][string]$ArdSolutionId,
-    [Parameter(Mandatory = $true)][string]$EnableApplicationGateway)
+    [Parameter(Mandatory = $true)][string]$EnableApplicationGateway,
+    [Parameter(Mandatory = $true)][string]$EnableFrontdoor)
 
 $ErrorActionPreference = "Stop"
 
@@ -87,13 +88,20 @@ if ($LastExitCode -ne 0) {
 $config = (az resource list --tag ard-resource-id=shared-app-configuration | ConvertFrom-Json)
 $configName = $config.name
 
+if ($EnableFrontdoor -eq "true") {
+    $customerServiceDomainFd = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/customer-service" --auth-mode login | ConvertFrom-Json).value
+    $apiDomainFd = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/api" --auth-mode login | ConvertFrom-Json).value
+    $memberPortalDomainFd = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/member-portal" --auth-mode login | ConvertFrom-Json).value
+    "customerServiceDomainNameFd=$customerServiceDomainFd" >> $env:GITHUB_OUTPUT
+}
+
 $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
 $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
-$memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value
-
+$memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value  
 if (!$customerServiceDomain) {
     throw "Unable to get Customer Service Domain"
 }
+"customerServiceDomainName=$customerServiceDomain" >> $env:GITHUB_OUTPUT
 
 if (!$apiDomain) {
     throw "Unable to get API Domain"
@@ -150,6 +158,23 @@ if (!$testSecret) {
 
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
 
+    if ($EnableFrontdoor -eq "true") {
+        kubectl create secret tls aks-csv-tls-fd `
+            --namespace $namespace `
+            --key .\fdcert.key `
+            --cert .\fdcert.cer
+
+        kubectl create secret tls aks-api-tls-fd `
+            --namespace $namespace `
+            --key .\fdcert.key `
+            --cert .\fdcert.cer
+
+        kubectl create secret tls aks-mem-tls-fd `
+            --namespace $namespace `
+            --key .\fdcert.key `
+            --cert .\fdcert.cer
+    }
+
     kubectl create secret tls aks-csv-tls `
         --namespace $namespace `
         --key .\cert.key `
@@ -163,7 +188,7 @@ if (!$testSecret) {
     kubectl create secret tls aks-mem-tls `
         --namespace $namespace `
         --key .\cert.key `
-        --cert .\cert.cer
+        --cert .\cert.cer  
 
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to set TLS for secrets."
@@ -215,12 +240,12 @@ else {
         --set controller.service.loadBalancerIP=$ip `
         --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
         --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
-        --set controller.service.annotations."service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path"="/healthz" `
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"="/healthz" `
         --set controller.nodeSelector."kubernetes\.io/os"=linux `
         --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
         --set controller.metrics.enabled=true `
         --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-        --set-string controller.podAnnotations."prometheus\.io/port"="10254"   
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 }
 
 helm install keda kedacore/keda -n $namespace
@@ -509,14 +534,26 @@ if ($EnableApplicationGateway -eq "true") {
     $content = Get-Content .\Deployment\external-ingress-agw.yaml
 }
 else {
-    Write-Host "Using ingress controller yaml."
-    $content = Get-Content .\Deployment\external-ingress.yaml
+    if ($EnableFrontdoor -eq "true") {
+        Write-Host "Using frontdoor controller yaml."
+        $content = Get-Content .\Deployment\external-ingress-afd.yaml
+    }
+    else {
+        Write-Host "Using ingress controller yaml."
+        $content = Get-Content .\Deployment\external-ingress.yaml
+    }
 }
 
 $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
 $content = $content.Replace('$API_DOMAIN', $apiDomain)
 $content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
+
+if ($EnableFrontdoor -eq "true") {
+    $content = $content.Replace('$CUSTOMER_SERVICE_FD_DOMAIN', $customerServiceDomainFd)
+    $content = $content.Replace('$API_FD_DOMAIN', $apiDomainFd)
+    $content = $content.Replace('$MEMBER_PORTAL_FD_DOMAIN', $memberPortalDomainFd)
+}
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
 $content = $content.Replace('$NAMESPACE', $namespace)
