@@ -89,20 +89,18 @@ $config = (az resource list --tag ard-resource-id=shared-app-configuration | Con
 $configName = $config.name
 
 if ($EnableFrontdoor -eq "true") {
-    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/customer-service" --auth-mode login | ConvertFrom-Json).value
-    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/api" --auth-mode login | ConvertFrom-Json).value
-    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/member-portal" --auth-mode login | ConvertFrom-Json).value
-}
-else {
-    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
-    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
-    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value    
+    $customerServiceDomainFd = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/customer-service" --auth-mode login | ConvertFrom-Json).value
+    $apiDomainFd = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/api" --auth-mode login | ConvertFrom-Json).value
+    $memberPortalDomainFd = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/member-portal" --auth-mode login | ConvertFrom-Json).value
+    "customerServiceDomainNameFd=$customerServiceDomainFd" >> $env:GITHUB_OUTPUT
 }
 
+$customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
+$apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
+$memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value  
 if (!$customerServiceDomain) {
     throw "Unable to get Customer Service Domain"
 }
-
 "customerServiceDomainName=$customerServiceDomain" >> $env:GITHUB_OUTPUT
 
 if (!$apiDomain) {
@@ -161,38 +159,36 @@ if (!$testSecret) {
     az storage blob download-batch -d . -s certs --account-name $BuildAccountName
 
     if ($EnableFrontdoor -eq "true") {
-        kubectl create secret tls aks-csv-tls `
+        kubectl create secret tls aks-csv-tls-fd `
             --namespace $namespace `
             --key .\fdcert.key `
             --cert .\fdcert.cer
 
-        kubectl create secret tls aks-api-tls `
+        kubectl create secret tls aks-api-tls-fd `
             --namespace $namespace `
             --key .\fdcert.key `
             --cert .\fdcert.cer
 
-        kubectl create secret tls aks-mem-tls `
+        kubectl create secret tls aks-mem-tls-fd `
             --namespace $namespace `
             --key .\fdcert.key `
             --cert .\fdcert.cer
     }
-    else {
-        kubectl create secret tls aks-csv-tls `
-            --namespace $namespace `
-            --key .\cert.key `
-            --cert .\cert.cer
 
-        kubectl create secret tls aks-api-tls `
-            --namespace $namespace `
-            --key .\cert.key `
-            --cert .\cert.cer
+    kubectl create secret tls aks-csv-tls `
+        --namespace $namespace `
+        --key .\cert.key `
+        --cert .\cert.cer
 
-        kubectl create secret tls aks-mem-tls `
-            --namespace $namespace `
-            --key .\cert.key `
-            --cert .\cert.cer        
-    }
+    kubectl create secret tls aks-api-tls `
+        --namespace $namespace `
+        --key .\cert.key `
+        --cert .\cert.cer
 
+    kubectl create secret tls aks-mem-tls `
+        --namespace $namespace `
+        --key .\cert.key `
+        --cert .\cert.cer  
 
     if ($LastExitCode -ne 0) {
         throw "An error has occured. Unable to set TLS for secrets."
@@ -215,56 +211,41 @@ if ($EnableApplicationGateway -eq "true") {
 }
 else {
 
-    if ($EnableFrontdoor -eq "false") {
-        # Step 4c. Install ingress controller
-        # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
+    # Step 4c. Install ingress controller
+    # See: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md
 
-        # Public IP is assigned only for Prod which we will reuse.
-        # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
-        $networks = (az resource list --tag ard-solution-id=networking-pri | ConvertFrom-Json)
-        if (!$networks) {
-            throw "Unable to find eligible shared key vault resource!"
-        }
-
-        $ipFqdn = $aks.name
-
-        $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
-        $ipResGroup = $pip.resourceGroup
-
-        # We need to do this step manually to ensure the dnsName is applied correctly and not rely on the helm ingress code below.
-        az network public-ip update --name $pip.name -g $ipResGroup --dns-name $ipFqdn
-        $ip = az network public-ip show --name $pip.name -g $ipResGroup --query ipAddress -o tsv
-        if ($LastExitCode -ne 0) {
-            throw "An error has occured. Unable to get public ip address"
-        }
-
-        Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
-
-        helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-            --set controller.replicaCount=2 `
-            --set controller.service.loadBalancerIP=$ip `
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"="/healthz" `
-            --set controller.nodeSelector."kubernetes\.io/os"=linux `
-            --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
-            --set controller.metrics.enabled=true `
-            --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-            --set-string controller.podAnnotations."prometheus\.io/port"="10254"  
+    # Public IP is assigned only for Prod which we will reuse.
+    # See: https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli
+    $networks = (az resource list --tag ard-solution-id=networking-pri | ConvertFrom-Json)
+    if (!$networks) {
+        throw "Unable to find eligible shared key vault resource!"
     }
-    else {
 
-        Write-Host "Configure ingress"
+    $ipFqdn = $aks.name
 
-        helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
-            --set controller.replicaCount=2 `
-            --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"="/healthz" `
-            --set controller.nodeSelector."kubernetes\.io/os"=linux `
-            --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
-            --set controller.metrics.enabled=true `
-            --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
-            --set-string controller.podAnnotations."prometheus\.io/port"="10254"  
-    } 
+    $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
+    $ipResGroup = $pip.resourceGroup
+
+    # We need to do this step manually to ensure the dnsName is applied correctly and not rely on the helm ingress code below.
+    az network public-ip update --name $pip.name -g $ipResGroup --dns-name $ipFqdn
+    $ip = az network public-ip show --name $pip.name -g $ipResGroup --query ipAddress -o tsv
+    if ($LastExitCode -ne 0) {
+        throw "An error has occured. Unable to get public ip address"
+    }
+
+    Write-Host "Configure ingress with static IP: $ip $ipFqdn $ipResGroup"
+
+    helm install ingress-nginx ingress-nginx/ingress-nginx --namespace $namespace `
+        --set controller.replicaCount=2 `
+        --set controller.service.loadBalancerIP=$ip `
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$ipFqdn `
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$ipResGroup `
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"="/healthz" `
+        --set controller.nodeSelector."kubernetes\.io/os"=linux `
+        --set defaultBackend.nodeSelector."kubernetes\.io/os"=linux `
+        --set controller.metrics.enabled=true `
+        --set-string controller.podAnnotations."prometheus\.io/scrape"="true" `
+        --set-string controller.podAnnotations."prometheus\.io/port"="10254"
 }
 
 helm install keda kedacore/keda -n $namespace
@@ -553,14 +534,26 @@ if ($EnableApplicationGateway -eq "true") {
     $content = Get-Content .\Deployment\external-ingress-agw.yaml
 }
 else {
-    Write-Host "Using ingress controller yaml."
-    $content = Get-Content .\Deployment\external-ingress.yaml
+    if ($EnableFrontdoor -eq "true") {
+        Write-Host "Using frontdoor controller yaml."
+        $content = Get-Content .\Deployment\external-ingress-afd.yaml
+    }
+    else {
+        Write-Host "Using ingress controller yaml."
+        $content = Get-Content .\Deployment\external-ingress.yaml
+    }
 }
 
 $content = $content.Replace('$NAMESPACE', $namespace)
 $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN', $customerServiceDomain)
 $content = $content.Replace('$API_DOMAIN', $apiDomain)
 $content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
+
+if ($EnableFrontdoor -eq "true") {
+    $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN_FD', $customerServiceDomainFd)
+    $content = $content.Replace('$API_DOMAIN_FD', $apiDomainFd)
+    $content = $content.Replace('$MEMBER_PORTAL_DOMAIN_FD', $memberPortalDomainFd)
+}
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
 $content = $content.Replace('$NAMESPACE', $namespace)
@@ -584,10 +577,4 @@ if ($LastExitCode -ne 0) {
 }
 else {
     Write-Host "Applied ingress config."    
-}
-
-if ($EnableFrontdoor -eq "true") {
-    # Step 12: Output ip address
-    $serviceip = kubectl get svc ingress-nginx-controller -n $namespace -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
-    "serviceip=$serviceip" >> $env:GITHUB_OUTPUT
 }

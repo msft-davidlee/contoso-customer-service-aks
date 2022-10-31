@@ -1,11 +1,11 @@
-param serviceIP string
+param customerServiceDomainNameFd string
 param customerServiceDomainName string
 param prefix string
 param appEnvironment string
 
 var stackName = '${prefix}${appEnvironment}'
 var frontendEndpointName = '${stackName}-azurefd-net'
-var customerServiceDomainNameFrontEndName = replace(customerServiceDomainName, '.', '-')
+var customerServiceDomainNameFrontEndName = replace(customerServiceDomainNameFd, '.', '-')
 var backendPoolName = 'customer-service-backend-pool'
 var frontdoorFqdn = '${stackName}.azurefd.net'
 
@@ -19,9 +19,9 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
         properties: {
           healthProbeMethod: 'GET'
           intervalInSeconds: 30
-          path: '/'
-          protocol: 'Http'
-          enabledState: 'Disabled'
+          path: '/healthz'
+          protocol: 'Https'
+          enabledState: 'Enabled'
         }
       }
     ]
@@ -45,7 +45,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
       {
         name: customerServiceDomainNameFrontEndName
         properties: {
-          hostName: customerServiceDomainName
+          hostName: customerServiceDomainNameFd
         }
       }
     ]
@@ -55,12 +55,12 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
         properties: {
           backends: [
             {
-              address: serviceIP
+              address: customerServiceDomainName
               httpPort: 80
               httpsPort: 443
               priority: 1
               weight: 50
-              backendHostHeader: customerServiceDomainName
+              backendHostHeader: customerServiceDomainNameFd
             }
           ]
           loadBalancingSettings: {

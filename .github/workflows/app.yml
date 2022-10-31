@@ -129,7 +129,7 @@ jobs:
           -EnableApplicationGateway ${{ needs.cd_deploy.outputs.enableApplicationGateway }} `
           -EnableFrontdoor ${{ needs.cd_deploy.outputs.enableFrontdoor }}
     outputs:
-      serviceIP: ${{ steps.appsdeploy.outputs.serviceip }}
+      customerServiceDomainNameFd: ${{ steps.appsdeploy.outputs.customerServiceDomainNameFd }}
       customerServiceDomainName: ${{ steps.appsdeploy.outputs.customerServiceDomainName }}
 
   cd_frontdoor:
@@ -160,7 +160,7 @@ jobs:
           parameters: >
             prefix=${{ needs.cd_deploy.outputs.prefix }}
             appEnvironment=${{ needs.setup.outputs.build_env }}
-            serviceIP=${{ needs.deploy_apps.outputs.serviceIP }}
+            customerServiceDomainNameFd=${{ needs.deploy_apps.outputs.customerServiceDomainNameFd }}
             customerServiceDomainName=${{ needs.deploy_apps.outputs.customerServiceDomainName }}
 
   deploy_db:

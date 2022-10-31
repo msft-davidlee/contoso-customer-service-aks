@@ -1,0 +1,88 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-ingress
+  namespace: $NAMESPACE
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+spec:
+  tls:
+    - hosts:
+        - $CUSTOMER_SERVICE_DOMAIN
+      secretName: aks-csv-tls
+    - hosts:
+        - $API_DOMAIN
+      secretName: aks-api-tls
+    - hosts:
+        - $MEMBER_PORTAL_DOMAIN
+      secretName: aks-mem-tls
+    - hosts:
+        - $CUSTOMER_SERVICE_DOMAIN_FD
+      secretName: aks-csv-tls-fd
+    - hosts:
+        - $API_DOMAIN_FD
+      secretName: aks-api-tls-fd
+    - hosts:
+        - $MEMBER_PORTAL_DOMAIN_FD
+      secretName: aks-mem-tls-fd
+  rules:
+    - host: $CUSTOMER_SERVICE_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: customerservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
+    - host: $CUSTOMER_SERVICE_DOMAIN_FD
+      http:
+        paths:
+          - backend:
+              service:
+                name: customerservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix            
+    - host: $API_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: pointsservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
+    - host: $API_DOMAIN_FD
+      http:
+        paths:
+          - backend:
+              service:
+                name: pointsservice
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix            
+    - host: $MEMBER_PORTAL_DOMAIN
+      http:
+        paths:
+          - backend:
+              service:
+                name: memberportal
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix
+    - host: $MEMBER_PORTAL_DOMAIN_FD
+      http:
+        paths:
+          - backend:
+              service:
+                name: memberportal
+                port:
+                  number: 80
+            path: /(.*)
+            pathType: Prefix            
