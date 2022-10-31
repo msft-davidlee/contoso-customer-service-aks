@@ -550,9 +550,9 @@ $content = $content.Replace('$API_DOMAIN', $apiDomain)
 $content = $content.Replace('$MEMBER_PORTAL_DOMAIN', $memberPortalDomain)
 
 if ($EnableFrontdoor -eq "true") {
-    $content = $content.Replace('$CUSTOMER_SERVICE_DOMAIN_FD', $customerServiceDomainFd)
-    $content = $content.Replace('$API_DOMAIN_FD', $apiDomainFd)
-    $content = $content.Replace('$MEMBER_PORTAL_DOMAIN_FD', $memberPortalDomainFd)
+    $content = $content.Replace('$CUSTOMER_SERVICE_FD_DOMAIN', $customerServiceDomainFd)
+    $content = $content.Replace('$API_FD_DOMAIN', $apiDomainFd)
+    $content = $content.Replace('$MEMBER_PORTAL_FD_DOMAIN', $memberPortalDomainFd)
 }
 
 # Note: Interestingly, we need to set namespace in the yaml file although we have setup the namespace here in apply.
