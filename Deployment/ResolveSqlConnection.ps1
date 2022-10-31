@@ -9,7 +9,17 @@ $ErrorActionPreference = "Stop"
 $all = az resource list --tag ard-solution-id=$ArdSolutionId | ConvertFrom-Json
 $all = $all | Where-Object { $_.tags.'ard-environment' -eq $ArdEnvironment }
 $sql = $all | Where-Object { $_.type -eq 'Microsoft.Sql/servers' }
+
+if (!$sql) {
+    throw "Unable to find eligible SQL server resource!"
+}
+
 $sqlSv = az sql server show --name $sql.name -g $sql.resourceGroup | ConvertFrom-Json
+
+if (!$sqlSv) {
+    throw "Unable to find SQL server resource!"
+}
+
 $SqlServer = $sqlSv.fullyQualifiedDomainName
 $SqlUsername = $sqlSv.administratorLogin
 
