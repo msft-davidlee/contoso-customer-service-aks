@@ -103,21 +103,6 @@ if ($LastExitCode -ne 0) {
 }
 "enableFrontdoor=$EnableFrontdoor" >> $env:GITHUB_OUTPUT
 
-if ($EnableFrontdoor -eq "true") {
-    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/customer-service" --auth-mode login | ConvertFrom-Json).value
-    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/api" --auth-mode login | ConvertFrom-Json).value
-    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/frontdoor/member-portal" --auth-mode login | ConvertFrom-Json).value
-}
-else {
-    $customerServiceDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/customer-service" --auth-mode login | ConvertFrom-Json).value
-    $apiDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/api" --auth-mode login | ConvertFrom-Json).value
-    $memberPortalDomain = (az appconfig kv show -n $configName --key "$ArdSolutionId/cert-domain-names/ingress/member-portal" --auth-mode login | ConvertFrom-Json).value
-}
-
-"customerServiceHostName=$customerServiceDomain" >> $env:GITHUB_OUTPUT
-"apiHostName=$apiDomain" >> $env:GITHUB_OUTPUT
-"memberHostName=$memberPortalDomain" >> $env:GITHUB_OUTPUT
-
 $pip = $networks | Where-Object { $_.type -eq "Microsoft.Network/publicIPAddresses" -and $_.tags.'ard-environment' -eq "prod" }
 $pipResId = $pip.id
 "pipResId=$pipResId" >> $env:GITHUB_OUTPUT
