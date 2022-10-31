@@ -19,7 +19,7 @@ resource afd 'Microsoft.Network/frontDoors@2021-06-01' = {
         properties: {
           healthProbeMethod: 'GET'
           intervalInSeconds: 30
-          path: '/healthz'
+          path: '/health'
           protocol: 'Https'
           enabledState: 'Enabled'
         }
